@@ -65,6 +65,7 @@ namespace BossMod
             Classes[Class.BLM] = DefineBLM();
             Classes[Class.RPR] = DefineRPR();
             Classes[Class.GNB] = DefineGNB();
+            Classes[Class.SAM] = DefineSAM();
         }
 
         private static ClassData DefineWAR()
@@ -201,6 +202,20 @@ namespace BossMod
             c.StrategyTracks.Add(new("BowS", typeof(GNB.Rotation.Strategy.OffensiveAbilityUse)));
             c.StrategyTracks.Add(new("RD", typeof(GNB.Rotation.Strategy.RoughDivideUse)));
             c.StrategyTracks.Add(new("Special", typeof(GNB.Rotation.Strategy.SpecialAction)));
+            return c;
+        }
+
+        private static ClassData DefineSAM()
+        {
+            var c = new ClassData(typeof(SAM.AID), SAM.Definitions.SupportedActions);
+            c.CooldownTracks.Add(new("TEye", ActionID.MakeSpell(SAM.AID.ThirdEye), 6));
+            c.CooldownTracks.Add(new("Feint", ActionID.MakeSpell(SAM.AID.Feint), 22));
+            c.CooldownTracks.Add(new("ArmsL", ActionID.MakeSpell(SAM.AID.ArmsLength), 32));
+            c.CooldownTracks.Add(new("Sprint", CommonDefinitions.IDSprint, 1));
+            c.StrategyTracks.Add(new("Gauge", typeof(SAM.Rotation.Strategy.GaugeUse)));
+            c.StrategyTracks.Add(new("TrN", typeof(SAM.Rotation.Strategy.TrueNorthUse)));
+            c.StrategyTracks.Add(new("Potion", typeof(SAM.Rotation.Strategy.PotionUse), 270));
+            c.StrategyTracks.Add(new("spec", typeof(SAM.Rotation.Strategy.SpecialAction)));
             return c;
         }
     }
