@@ -212,6 +212,9 @@ namespace BossMod
             c.CooldownTracks.Add(new("Feint", ActionID.MakeSpell(SAM.AID.Feint), 22));
             c.CooldownTracks.Add(new("ArmsL", ActionID.MakeSpell(SAM.AID.ArmsLength), 32));
             c.CooldownTracks.Add(new("Sprint", CommonDefinitions.IDSprint, 1));
+            c.StrategyTracks.Add(new("Higan", typeof(SAM.Rotation.Strategy.OffensiveAbilityUse)));
+            c.StrategyTracks.Add(new("Tsu", typeof(SAM.Rotation.Strategy.OffensiveAbilityUse)));
+            c.StrategyTracks.Add(new("Ogi", typeof(SAM.Rotation.Strategy.OffensiveAbilityUse)));
             c.StrategyTracks.Add(new("Gauge", typeof(SAM.Rotation.Strategy.GaugeUse)));
             c.StrategyTracks.Add(new("TrN", typeof(SAM.Rotation.Strategy.TrueNorthUse)));
             c.StrategyTracks.Add(new("Potion", typeof(SAM.Rotation.Strategy.PotionUse), 270));
