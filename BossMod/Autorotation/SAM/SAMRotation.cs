@@ -3,6 +3,7 @@ using BossMod.Network.ServerIPC;
 using Dalamud.Game.ClientState.JobGauge.Enums;
 using Dalamud.Game.ClientState.JobGauge.Types;
 using SharpDX.Win32;
+using System;
 using System.Reflection.Metadata;
 
 namespace BossMod.SAM
@@ -22,15 +23,17 @@ namespace BossMod.SAM
             public SAMGauge Gauge;
             public float TargetHiganbanaLeft;
 
+            public bool Filler;
+
             public AID BestIaijutsu => Oneseal ? AID.Higanbana
                 : Twoseal ? AID.TenkaGoken
                 : Threeseal ? AID.MidareSetsugekka
                 : AID.Iaijutsu;
-            public AID BestTsubame => Gauge.Kaeshi ==  Kaeshi.HIGANBANA ? AID.KaeshiHiganbana
+            public AID BestTsubame => Gauge.Kaeshi == Kaeshi.HIGANBANA ? AID.KaeshiHiganbana
                 : Gauge.Kaeshi == Kaeshi.GOKEN ? AID.KaeshiGoken
                 : Gauge.Kaeshi == Kaeshi.SETSUGEKKA ? AID.KaeshiSetsugekka
+                : Gauge.Kaeshi == Kaeshi.NAMIKIRI ? AID.KaeshiNamikiri
                 : AID.TsubameGaeshi;
-            public AID BestNamikiri => Gauge.Kaeshi == Kaeshi.NAMIKIRI ? AID.KaeshiNamikiri : AID.OgiNamikiri;
             public SID ExpectedHiganbana => SID.Higanbana;
             public AID BestFuga => Unlocked(TraitID.FugaMastery) ? AID.Fuko : AID.Fuga;
             public AID ComboLastMove => (AID)ComboLastAction;
@@ -41,7 +44,7 @@ namespace BossMod.SAM
 
             public override string ToString()
             {
-                return $"SenCount={Gauge.Sen}, Meikyo={MeikyoShisuiLeft}, Kenki={Gauge.Kenki} RB={RaidBuffsLeft:f1}, Higanbana={TargetHiganbanaLeft:f1}, TsubameCD={CD(CDGroup.TsubameGaeshi)}, PotCD={PotionCD:f1}, GCD={GCD:f3}, ALock={AnimationLock:f3}+{AnimationLockDelay:f3}, lvl={Level}/{UnlockProgress}";
+                return $"SenCount={Gauge.Sen}, Filler={Filler}, Meikyo={MeikyoShisuiLeft}, Kenki={Gauge.Kenki} RB={RaidBuffsLeft:f1}, Higanbana={TargetHiganbanaLeft:f1}, TsubameCD={CD(CDGroup.TsubameGaeshi)}, PotCD={PotionCD:f1}, GCD={GCD:f3}, ALock={AnimationLock:f3}+{AnimationLockDelay:f3}, lvl={Level}/{UnlockProgress}";
             }
         }
 
@@ -76,7 +79,7 @@ namespace BossMod.SAM
                 [PropertyDisplay("Force", 0x8000ff00)]
                 Force = 2,
             }
-            
+
             public enum PotionUse : uint
             {
                 Manual = 0, // potion won't be used automatically
@@ -96,6 +99,8 @@ namespace BossMod.SAM
                 None = 0, // don't use any special actions
             }
 
+            public OffensiveAbilityUse TsubameGaeshiStrategy;
+            public OffensiveAbilityUse OgiNamikiriStrategy;
             public GaugeUse GaugeStrategy; // how are we supposed to handle gauge
             public PotionUse PotionStrategy; // how are we supposed to use potions
             //public OffensiveAbilityUse CommunioUse;
@@ -105,15 +110,19 @@ namespace BossMod.SAM
 
             public void ApplyStrategyOverrides(uint[] overrides)
             {
-                if (overrides.Length >= 4)
+                if (overrides.Length >= 6)
                 {
-                    GaugeStrategy = (GaugeUse)overrides[0];
-                    TrueNorthStrategy = (TrueNorthUse)overrides[1];
-                    PotionStrategy = (PotionUse)overrides[2];
-                    SpecialActionUse = (SpecialAction)overrides[3];
+                    TsubameGaeshiStrategy = (OffensiveAbilityUse)overrides[0];
+                    OgiNamikiriStrategy = (OffensiveAbilityUse)overrides[1];
+                    GaugeStrategy = (GaugeUse)overrides[2];
+                    TrueNorthStrategy = (TrueNorthUse)overrides[3];
+                    PotionStrategy = (PotionUse)overrides[4];
+                    SpecialActionUse = (SpecialAction)overrides[5];
                 }
                 else
                 {
+                    TsubameGaeshiStrategy = OffensiveAbilityUse.Automatic;
+                    OgiNamikiriStrategy = OffensiveAbilityUse.Automatic;
                     GaugeStrategy = GaugeUse.Automatic;
                     TrueNorthStrategy = TrueNorthUse.Automatic;
                     PotionStrategy = PotionUse.Manual;
@@ -289,9 +298,50 @@ namespace BossMod.SAM
                     return false;
             }
         }
-        
+
+        public static bool ShouldUseOgiNamikiri(State state, Strategy strategy, bool aoe)
+        {
+            bool meikyobuff = state.MeikyoShisuiLeft > state.AnimationLock;
+            if (strategy.OgiNamikiriStrategy == Strategy.OffensiveAbilityUse.Delay)
+                return false;
+            if (strategy.OgiNamikiriStrategy == Strategy.OffensiveAbilityUse.Force)
+                return true;
+            if (!aoe && state.OgiNamikiriReady > state.AnimationLock && state.TargetHiganbanaLeft >= 45)
+                return true;
+            if (aoe && state.OgiNamikiriReady > state.AnimationLock && state.CD(CDGroup.TsubameGaeshi) > 10)
+                return true;
+            return false;
+        }
+
+        public static bool ShouldUseTsubameGaeshi(State state, Strategy strategy, bool aoe)
+        {
+            if (strategy.TsubameGaeshiStrategy == Strategy.OffensiveAbilityUse.Delay)
+                return false;
+            if (strategy.TsubameGaeshiStrategy == Strategy.OffensiveAbilityUse.Force)
+                return true;
+            if (state.Gauge.Kaeshi == Kaeshi.NAMIKIRI)
+                return true;
+            if (!aoe && state.Gauge.Kaeshi == Kaeshi.SETSUGEKKA && state.CD(CDGroup.TsubameGaeshi) - 60 <= state.GCD && (state.CD(CDGroup.Ikishoten) > 89 || state.CD(CDGroup.Ikishoten) <= 0))
+                return true;
+            if (aoe && state.Gauge.Kaeshi == Kaeshi.GOKEN && state.CD(CDGroup.TsubameGaeshi) - 60 <= state.GCD && (state.CD(CDGroup.Ikishoten) > 89 || state.CD(CDGroup.Ikishoten) <= 0))
+                return true;
+            return false;
+        }
+
+        public static bool ShouldUseFiller(State state, Strategy strategy, bool aoe)
+        {
+            bool meikyobuff = state.MeikyoShisuiLeft > state.AnimationLock;
+            bool inOddMinute = (int)(strategy.CombatTimer / 60) % 2 == 1 && state.Gauge.Sen == Sen.SETSU && !meikyobuff && state.TargetHiganbanaLeft >= 45;
+            if (inOddMinute)
+                return state.Filler = true;
+            if (state.ComboLastMove == AID.Yukikaze && state.Filler)
+                return true;
+            return false;
+        }
+
         public static AID GetNextBestGCD(State state, Strategy strategy, bool aoe)
         {
+            bool meikyobuff = state.MeikyoShisuiLeft > state.AnimationLock;
             bool Fugetsubuff = state.FugetsuLeft > state.AnimationLock;
             bool Fukabuff = state.FukaLeft > state.AnimationLock;
             if (aoe)
@@ -299,18 +349,25 @@ namespace BossMod.SAM
                 if (state.Twoseal && state.Unlocked(AID.TenkaGoken))
                     return state.BestIaijutsu;
             }
-            
+
             if (!aoe && Fugetsubuff && Fukabuff)
             {
-                if (state.CD(CDGroup.TsubameGaeshi) > state.GCD && state.TargetHiganbanaLeft > state.GCD && state.OgiNamikiriReady > state.AnimationLock && state.CD(CDGroup.TsubameGaeshi) > 5)
+                if (ShouldUseOgiNamikiri(state, strategy, aoe))
                     return AID.OgiNamikiri;
-                if (state.Gauge.Kaeshi == Kaeshi.NAMIKIRI)
-                    return state.BestNamikiri;
+                if (ShouldUseTsubameGaeshi(state, strategy, aoe))
+                    return state.BestTsubame;
                 if (state.Threeseal)
                     return state.BestIaijutsu;
-                if (state.Gauge.Kaeshi == Kaeshi.SETSUGEKKA && state.CD(CDGroup.TsubameGaeshi) <= 60)
+                if (state.Oneseal && state.TargetHiganbanaLeft <= 5)
+                    return state.BestIaijutsu;
+            }
+            if (aoe && Fugetsubuff && Fukabuff)
+            {
+                if (ShouldUseOgiNamikiri(state, strategy, aoe))
+                    return AID.OgiNamikiri;
+                if (ShouldUseTsubameGaeshi(state, strategy, aoe))
                     return state.BestTsubame;
-                if (state.Oneseal && state.TargetHiganbanaLeft <= 2.5 && state.CD(CDGroup.TsubameGaeshi) > 45)
+                if (state.Threeseal)
                     return state.BestIaijutsu;
             }
 
@@ -323,23 +380,54 @@ namespace BossMod.SAM
             bool Fukabuff = state.FukaLeft > state.AnimationLock;
             bool raidbuffs = state.RaidBuffsLeft > state.GCD;
             bool meikyobuff = state.MeikyoShisuiLeft > state.AnimationLock;
+            bool inOddMinute = (int)(strategy.CombatTimer / 60) % 2 == 1 && state.Gauge.Sen == Sen.SETSU && !meikyobuff && state.TargetHiganbanaLeft >= 45;
+            bool fillerdone = false;
 
+            if (inOddMinute && fillerdone == false)
+            {
+                if (state.ComboLastAction == (uint)AID.Hagakure)
+                {
+                    fillerdone = true;
+                    state.Filler = false;
+                }
+                if (state.CanWeave(CDGroup.Hagakure, 0.6f, deadline))
+                    return ActionID.MakeSpell(AID.Hagakure);
+
+            }
             if (ShouldUsePotion(state, strategy) && state.CanWeave(state.PotionCD, 1.1f, deadline))
                 return CommonDefinitions.IDPotionStr;
             if (ShouldUseTrueNorth(state, strategy, aoe) && state.CanWeave(CDGroup.TrueNorth - 45, 0.6f, deadline) && !aoe && state.GCD < 0.8)
                 return ActionID.MakeSpell(AID.TrueNorth);
-            if (state.Unlocked(AID.MeikyoShisui) && !meikyobuff && state.CanWeave(state.CD(CDGroup.MeikyoShisui) - 55, 0.6f, deadline) && state.ComboTimeLeft == 0 && state.CD(CDGroup.TsubameGaeshi) > 0 && state.TargetHiganbanaLeft <= state.GCD + 2.5)
+            if (!aoe && state.Unlocked(AID.MeikyoShisui) && !meikyobuff && state.CanWeave(state.CD(CDGroup.MeikyoShisui) - 55, 0.6f, deadline) && state.ComboTimeLeft == 0 && state.CD(CDGroup.TsubameGaeshi) > 0 && state.TargetHiganbanaLeft <= 5)
                 return ActionID.MakeSpell(AID.MeikyoShisui);
-            if (state.Gauge.MeditationStacks == 3 && state.CanWeave(CDGroup.Shoha, 0.6f, deadline) && Fugetsubuff && Fukabuff)
+            if (aoe && state.Unlocked(AID.MeikyoShisui) && !meikyobuff && state.CanWeave(state.CD(CDGroup.MeikyoShisui) - 55, 0.6f, deadline) && state.ComboTimeLeft == 0 && state.CD(CDGroup.TsubameGaeshi) > 0)
+                return ActionID.MakeSpell(AID.MeikyoShisui);
+            if (!aoe && state.Gauge.MeditationStacks == 3 && state.CanWeave(CDGroup.Shoha, 0.6f, deadline) && Fugetsubuff && Fukabuff && (raidbuffs || GetNextBestGCD(state, strategy, aoe) == state.BestIaijutsu || GetNextBestGCD(state, strategy, aoe) == AID.OgiNamikiri))
                 return ActionID.MakeSpell(AID.Shoha);
-            if (state.Unlocked(AID.HissatsuSenei) && state.CanWeave(CDGroup.HissatsuSenei, 0.6f, deadline) && state.Gauge.Kenki >= 25 
-                && ((strategy.CombatTimer < 10 && state.Gauge.Kaeshi == Kaeshi.SETSUGEKKA) || strategy.CombatTimer > 10 && state.CD(CDGroup.HissatsuSenei) < state.AnimationLock) && Fugetsubuff)
+            if (aoe && state.Gauge.MeditationStacks == 3 && state.CanWeave(CDGroup.ShohaII, 0.6f, deadline) && Fugetsubuff && Fukabuff && (raidbuffs || GetNextBestGCD(state, strategy, aoe) == state.BestIaijutsu || GetNextBestGCD(state, strategy, aoe) == AID.OgiNamikiri))
+                return ActionID.MakeSpell(AID.ShohaII);
+            if (!aoe && state.Unlocked(AID.HissatsuSenei) && state.CanWeave(CDGroup.HissatsuSenei, 0.6f, deadline) && state.Gauge.Kenki >= 25
+                && state.Gauge.Kaeshi == Kaeshi.SETSUGEKKA && (state.CD(CDGroup.Ikishoten) <= state.AnimationLock || state.CD(CDGroup.Ikishoten) > 89))
                 return ActionID.MakeSpell(AID.HissatsuSenei);
-            if (state.Unlocked(AID.HissatsuSenei) && state.CD(CDGroup.HissatsuSenei) > state.GCD && state.CanWeave(CDGroup.HissatsuShinten, 0.6f, deadline) 
-                && ((state.Gauge.Kenki >= 25 && raidbuffs) || (state.Gauge.Kenki >= 75 && !raidbuffs) || (state.CD(CDGroup.Ikishoten) < 6 && state.Gauge.Kenki >= 50)) && Fugetsubuff)
+            if (aoe && state.Unlocked(AID.HissatsuGuren) && state.CanWeave(CDGroup.HissatsuGuren, 0.6f, deadline) && state.Gauge.Kenki >= 25
+                && state.Gauge.Kaeshi == Kaeshi.GOKEN && (state.CD(CDGroup.Ikishoten) <= state.AnimationLock || state.CD(CDGroup.Ikishoten) > 89))
+                return ActionID.MakeSpell(AID.HissatsuGuren);
+            if (!aoe && state.Unlocked(AID.HissatsuSenei) && state.CD(CDGroup.HissatsuSenei) > state.GCD && state.CanWeave(CDGroup.HissatsuShinten, 0.6f, deadline)
+                && ((state.Gauge.Kenki >= 25 && state.CD(CDGroup.HissatsuSenei) > 20)
+                || (state.Gauge.Kenki >= 75 && state.CD(CDGroup.HissatsuSenei) < 20))
+                && Fugetsubuff)
                 return ActionID.MakeSpell(AID.HissatsuShinten);
-            if (state.Unlocked(AID.Ikishoten) && state.CanWeave(CDGroup.Ikishoten, 0.6f, deadline) && state.Gauge.Kenki <= 50 && Fugetsubuff && Fukabuff)
+            if (aoe && state.Unlocked(AID.HissatsuGuren) && state.CD(CDGroup.HissatsuGuren) > state.GCD && state.CanWeave(CDGroup.HissatsuKyuten, 0.6f, deadline)
+                && ((state.Gauge.Kenki >= 25 && state.CD(CDGroup.HissatsuGuren) > 20)
+                || (state.Gauge.Kenki >= 75 && state.CD(CDGroup.HissatsuGuren) < 20))
+                && Fugetsubuff)
+                return ActionID.MakeSpell(AID.HissatsuKyuten);
+            if (state.Unlocked(AID.Ikishoten) && state.CanWeave(CDGroup.Ikishoten, 0.6f, deadline) && state.Gauge.Kenki <= 50 && Fugetsubuff && Fukabuff
+                && ((state.CD(CDGroup.HissatsuSenei) < state.AnimationLock && state.Gauge.Kenki < 25)
+                || state.CD(CDGroup.TsubameGaeshi) > 10))
                 return ActionID.MakeSpell(AID.Ikishoten);
+            if (state.Unlocked(AID.HissatsuGyoten) && state.CanWeave(CDGroup.HissatsuGyoten, 0.6f, deadline) && state.Gauge.Kenki == 10 && state.CD(CDGroup.Ikishoten) > 89)
+                return ActionID.MakeSpell(AID.HissatsuGyoten);
 
             return new();
         }

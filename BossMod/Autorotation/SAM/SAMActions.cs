@@ -1,4 +1,5 @@
-﻿using Dalamud.Game.ClientState.JobGauge.Types;
+﻿using Dalamud.Game.ClientState.JobGauge.Enums;
+using Dalamud.Game.ClientState.JobGauge.Types;
 using System;
 using System.Linq;
 
@@ -20,13 +21,12 @@ namespace BossMod.SAM
             _config = Service.Config.Get<SAMConfig>();
             _state = new(autorot.Cooldowns);
             _strategy = new();
-
+            
             // upgrades
             SupportedSpell(AID.Iaijutsu).TransformAction = SupportedSpell(AID.Higanbana).TransformAction = SupportedSpell(AID.TenkaGoken).TransformAction = SupportedSpell
                 (AID.MidareSetsugekka).TransformAction = () => ActionID.MakeSpell(_state.BestIaijutsu);
             SupportedSpell(AID.TsubameGaeshi).TransformAction = SupportedSpell(AID.KaeshiHiganbana).TransformAction = SupportedSpell(AID.KaeshiGoken).TransformAction = SupportedSpell
                 (AID.KaeshiSetsugekka).TransformAction = () => ActionID.MakeSpell(_state.BestTsubame);
-            SupportedSpell(AID.OgiNamikiri).TransformAction = SupportedSpell(AID.KaeshiNamikiri).TransformAction = () => ActionID.MakeSpell(_state.BestNamikiri);
             SupportedSpell(AID.Fuga).TransformAction = SupportedSpell(AID.Fuko).TransformAction = () => ActionID.MakeSpell(_state.BestFuga);
             SupportedSpell(AID.LegSweep).Condition = target => target?.CastInfo?.Interruptible ?? false;
 
@@ -128,7 +128,7 @@ namespace BossMod.SAM
         private void UpdatePlayerState()
         {
             FillCommonPlayerState(_state);
-
+            _state.Filler = (int)(_strategy.CombatTimer / 60) % 2 == 1 && _state.Gauge.Sen == Sen.SETSU && _state.MeikyoShisuiLeft < _state.AnimationLock && _state.TargetHiganbanaLeft >= 45;
             var gauge = Service.JobGauges.Get<SAMGauge>();
             _state.Oneseal = (gauge.HasKa && !gauge.HasGetsu && !gauge.HasSetsu) 
                 || (!gauge.HasKa && gauge.HasGetsu && !gauge.HasSetsu)
@@ -154,7 +154,7 @@ namespace BossMod.SAM
         {
             // placeholders
             SupportedSpell(AID.Hakaze).PlaceholderForAuto = _config.FullRotation ? AutoActionST : AutoActionNone;
-            SupportedSpell(AID.Fuga).PlaceholderForAuto = _config.FullRotation ? AutoActionAOE : AutoActionNone;
+            SupportedSpell(AID.Fuga).PlaceholderForAuto = SupportedSpell(AID.Fuko).PlaceholderForAuto = _config.FullRotation ? AutoActionAOE : AutoActionNone;
 
             // combo replacement
         }
