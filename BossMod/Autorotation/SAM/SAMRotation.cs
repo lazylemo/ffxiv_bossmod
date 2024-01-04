@@ -1,10 +1,6 @@
 ﻿
-using BossMod.Network.ServerIPC;
 using Dalamud.Game.ClientState.JobGauge.Enums;
 using Dalamud.Game.ClientState.JobGauge.Types;
-using SharpDX.Win32;
-using System;
-using System.Reflection.Metadata;
 
 namespace BossMod.SAM
 {
@@ -24,8 +20,6 @@ namespace BossMod.SAM
             public float TargetHiganbanaLeft;
             public bool HasFuka;
             public bool HasFugetsu;
-            public bool InRear;
-            public bool InFlank;
 
             public bool Filler;
 
