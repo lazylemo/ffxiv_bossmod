@@ -5,5 +5,8 @@
     {
         [PropertyDisplay("Execute optimal rotations on Hakaze (ST) or Fuga/Fuko (AOE)")]
         public bool FullRotation = true;
+
+        [PropertyDisplay("Should use Filler")]
+        public bool Filler = true;
     }
 }

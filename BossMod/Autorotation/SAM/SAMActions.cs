@@ -144,6 +144,7 @@ namespace BossMod.SAM
 
             _state.HasFugetsu = Player.FindStatus(SID.Fugetsu) != null;
             _state.HasFuka = Player.FindStatus(SID.Fuka) != null;
+            _state.HasMeikyoShisui = Player.FindStatus(SID.MeikyoShisui) != null;
             _state.FugetsuLeft = StatusDetails(Player, SID.Fugetsu, Player.InstanceID).Left;
             _state.FukaLeft = StatusDetails(Player, SID.Fuka, Player.InstanceID).Left;
             _state.OgiNamikiriReady = StatusDetails(Player, SID.OgiNamikiriReady, Player.InstanceID).Left;
