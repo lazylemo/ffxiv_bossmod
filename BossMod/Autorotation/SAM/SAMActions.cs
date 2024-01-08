@@ -142,6 +142,7 @@ namespace BossMod.SAM
             if (_state.ComboLastMove == AID.Gekko || _state.ComboLastMove == AID.Kasha || _state.ComboLastMove == AID.Yukikaze || _state.ComboLastMove == AID.Mangetsu || _state.ComboLastMove == AID.Oka)
                 _state.ComboTimeLeft = 0;
 
+            _state.GCDTime = ActionManagerEx.Instance!.GCDTime();
             _state.HasFugetsu = Player.FindStatus(SID.Fugetsu) != null;
             _state.HasFuka = Player.FindStatus(SID.Fuka) != null;
             _state.HasMeikyoShisui = Player.FindStatus(SID.MeikyoShisui) != null;
@@ -150,6 +151,7 @@ namespace BossMod.SAM
             _state.OgiNamikiriReady = StatusDetails(Player, SID.OgiNamikiriReady, Player.InstanceID).Left;
             _state.MeikyoShisuiLeft = StatusDetails(Player, SID.MeikyoShisui, Player.InstanceID).Left;
             _state.TrueNorthLeft = StatusDetails(Player, SID.TrueNorth, Player.InstanceID).Left;
+            _state.ClosestPositional = GetClosestPositional();
 
             _state.TargetHiganbanaLeft = StatusDetails(Autorot.PrimaryTarget, _state.ExpectedHiganbana, Player.InstanceID).Left;
         }
@@ -163,7 +165,20 @@ namespace BossMod.SAM
             // combo replacement
         }
 
-        private bool WithoutDOT(Actor a) => Rotation.RefreshDOT(_state, StatusDetails(a, SID.Higanbana, Player.InstanceID).Left);
+        private Positional GetClosestPositional()
+        {
+            var tar = Autorot.PrimaryTarget;
+            if (tar == null) return Positional.Any;
+
+            return (Player.Position - tar.Position).Normalized().Dot(tar.Rotation.ToDirection()) switch
+            {
+                < -0.707167f => Positional.Rear,
+                < 0.707167f => Positional.Flank,
+                _ => Positional.Front
+            };
+        }
+
+            private bool WithoutDOT(Actor a) => Rotation.RefreshDOT(_state, StatusDetails(a, SID.Higanbana, Player.InstanceID).Left);
         private int NumTargetsHitByAOEGCD() => Autorot.Hints.NumPriorityTargetsInAOECircle(Player.Position, 5);
     }
 }
