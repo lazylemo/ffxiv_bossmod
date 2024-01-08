@@ -582,12 +582,15 @@ namespace BossMod.RPR
 
             if (enshrouded && !aoe)
             {
-                if ((state.LemureShroudCount == 4 || state.LemureShroudCount == 3) && (!state.lastActionisSoD || strategy.PotionStrategy == Strategy.PotionUse.Burst && !state.lastActionisSoD && state.PotionCD < 1) && state.CD(CDGroup.ArcaneCircle) < 9)
+                if ((state.LemureShroudCount == 4 && strategy.PotionStrategy == Strategy.PotionUse.Burst && !state.lastActionisSoD && state.PotionCD < 1 || state.LemureShroudCount == 3)
+                    && state.CD(CDGroup.ArcaneCircle) < 9)
+                    return AID.ShadowofDeath;
+                if ((state.LemureShroudCount == 4 || state.LemureShroudCount == 3)
+                    && (!state.lastActionisSoD)
+                    && state.CD(CDGroup.ArcaneCircle) < 9)
                     return AID.ShadowofDeath;
                 if (state.Unlocked(AID.Communio) && state.LemureShroudCount is 1 && state.VoidShroudCount is 0)
                     return AID.Communio;
-                if (state.Unlocked(AID.LemuresSlice) && state.VoidShroudCount >= 2 && state.CD(CDGroup.ArcaneCircle) > 10)
-                    return AID.LemuresSlice;
                 if (state.EnhancedVoidReapingLeft > state.AnimationLock)
                     return AID.VoidReaping;
                 if (state.EnhancedCrossReapingLeft > state.AnimationLock)
