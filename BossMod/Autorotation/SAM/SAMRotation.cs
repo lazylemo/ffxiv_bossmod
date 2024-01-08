@@ -382,12 +382,19 @@ namespace BossMod.SAM
 
             return GetNextUnlockedComboAction(state, strategy, positional, aoe);
         }
-
+        
         public static ActionID GetNextBestOGCD(State state, Strategy strategy, float deadline, bool aoe, (Positional pos, bool imm) positional)
         {
             bool raidbuffs = state.RaidBuffsLeft > state.GCD;
             bool inOddMinute = state.CD(CDGroup.Ikishoten) < 60 && state.CD(CDGroup.Ikishoten) > 30;
-            bool inEvenBurst = (state.CD(CDGroup.TsubameGaeshi) > 0 && state.CD(CDGroup.TsubameGaeshi) - 60 < 22) || state.CD(CDGroup.TsubameGaeshi) <= state.GCD;
+
+            if (strategy.CombatTimer > -100 && strategy.CombatTimer < -0.7f)
+            {
+                if (strategy.CombatTimer > -9 && !state.HasMeikyoShisui)
+                    return ActionID.MakeSpell(AID.MeikyoShisui);
+                if (strategy.CombatTimer > -5 && state.TrueNorthLeft == 0)
+                    return ActionID.MakeSpell(AID.TrueNorth);
+            }
 
             if (inOddMinute && state.Gauge.Sen == Sen.SETSU && !state.HasMeikyoShisui && state.TargetHiganbanaLeft >= 45 && Service.Config.Get<SAMConfig>().Filler)
             {

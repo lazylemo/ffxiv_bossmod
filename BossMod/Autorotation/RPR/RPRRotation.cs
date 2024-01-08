@@ -585,7 +585,7 @@ namespace BossMod.RPR
                 if ((state.LemureShroudCount == 4 && strategy.PotionStrategy == Strategy.PotionUse.Burst && !state.lastActionisSoD && state.PotionCD < 1 || state.LemureShroudCount == 3)
                     && state.CD(CDGroup.ArcaneCircle) < 9)
                     return AID.ShadowofDeath;
-                if ((state.LemureShroudCount == 4 || state.LemureShroudCount == 3)
+                if ((state.LemureShroudCount == 4 || state.LemureShroudCount == 3) && strategy.PotionStrategy != Strategy.PotionUse.Burst
                     && (!state.lastActionisSoD)
                     && state.CD(CDGroup.ArcaneCircle) < 9)
                     return AID.ShadowofDeath;
