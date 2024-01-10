@@ -467,5 +467,20 @@ namespace BossMod
                 return (float)(Autorot.WorldState.CurrentTime - _playerCombatStart).TotalSeconds;
             return -Math.Max(0.001f, Autorot.WorldState.Client.CountdownRemaining ?? float.MaxValue);
         }
+
+        protected float TimeToKill()
+        {
+            var tar = Autorot.PrimaryTarget;
+
+            if (tar != null)
+            {
+                float tarMaxHP = Autorot.PrimaryTarget.HP.Max;
+                float tarCurHP = Autorot.PrimaryTarget.HP.Cur;
+
+                return tarCurHP/((tarMaxHP - tarCurHP) / CombatTimer());
+            }
+
+            return 0f;
+        }
     }
 }

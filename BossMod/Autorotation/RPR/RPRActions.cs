@@ -129,6 +129,7 @@ namespace BossMod.RPR
         private void UpdatePlayerState()
         {
             FillCommonPlayerState(_state);
+            _state.TTK = TimeToKill();
             _state.HasSoulsow = Player.FindStatus(SID.Soulsow) != null;
 
             var gauge = Service.JobGauges.Get<RPRGauge>();
