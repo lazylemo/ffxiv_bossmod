@@ -44,8 +44,6 @@ namespace BossMod
             Service.Log($"[InputOverride] GetGamepadAxis address: 0x{_getGamepadAxisHook.Address:X}");
 
             _getKeyRef = Service.KeyState.GetType().GetMethod("GetRefValue", BindingFlags.NonPublic | BindingFlags.Instance)!.CreateDelegate<GetRefValueDelegate>(Service.KeyState);
-
-            _forceDisableMovementPtr = Service.SigScanner.GetStaticAddressFromSig("F3 0F 10 05 ?? ?? ?? ?? 0F 2E C6 0F 8A");
         }
 
         public void Dispose()
@@ -55,7 +53,7 @@ namespace BossMod
         }
 
         // TODO: reconsider...
-        public bool IsMoving() => Service.KeyState[VirtualKey.W] || Service.KeyState[VirtualKey.S] || Service.KeyState[VirtualKey.A] || Service.KeyState[VirtualKey.D] || GamepadOverridesEnabled && (GamepadOverrides[3] != 0 || GamepadOverrides[4] != 0);
+        public bool IsMoving() => Service.KeyState[VirtualKey.W] || Service.KeyState[VirtualKey.S] || Service.KeyState[VirtualKey.A] || Service.KeyState[VirtualKey.D] || Service.KeyState[VirtualKey.Q] || Service.KeyState[VirtualKey.E] || GamepadOverridesEnabled && (GamepadOverrides[3] != 0 || GamepadOverrides[4] != 0);
         public bool IsMoveRequested() => IsWindowActive() && (ReallyPressed(VirtualKey.W) || ReallyPressed(VirtualKey.S) || ReallyPressed(VirtualKey.A) || ReallyPressed(VirtualKey.D));
 
         public bool IsBlocked() => _movementBlocked;
@@ -69,9 +67,6 @@ namespace BossMod
             Block(VirtualKey.S);
             Block(VirtualKey.A);
             Block(VirtualKey.D);
-            Block(VirtualKey.Q);
-            Block(VirtualKey.E);
-            //ForceDisableMovement++;
             Service.Log("[InputOverride] Movement block started");
         }
 
@@ -84,9 +79,6 @@ namespace BossMod
             Unblock(VirtualKey.S);
             Unblock(VirtualKey.A);
             Unblock(VirtualKey.D);
-            Unblock(VirtualKey.Q);
-            Unblock(VirtualKey.E);
-            //ForceDisableMovement--;
             Service.Log("[InputOverride] Movement block ended");
         }
 

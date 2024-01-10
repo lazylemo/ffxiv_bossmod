@@ -183,7 +183,14 @@ namespace BossMod
                 //1221 => true, // SCH chain stratagem - note that this is a debuff on enemy
                 1297 => true, // RDM embolden
                 1822 => true, // DNC technical finish
+                1825 => true,
                 1878 => true, // AST divination
+                1882 => true,
+                1883 => true,
+                1884 => true,
+                1885 => true,
+                1886 => true,
+                1887 => true,
                 2599 => true, // RPR arcane circle
                 2703 => true, // SMN searing light
                 2964 => true, // BRD radiant finale

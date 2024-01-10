@@ -14,7 +14,6 @@ namespace BossMod.SAM
         private bool _aoe;
         private Rotation.State _state;
         private Rotation.Strategy _strategy;
-        private (Positional pos, bool imm) _positional;
 
         public Actions(Autorotation autorot, Actor player)
             : base(autorot, player, Definitions.UnlockQuests, Definitions.SupportedActions)
@@ -88,7 +87,7 @@ namespace BossMod.SAM
             UpdatePlayerState();
             FillCommonStrategy(_strategy, CommonDefinitions.IDPotionStr);
             _strategy.ApplyStrategyOverrides(Autorot.Bossmods.ActiveModule?.PlanExecution?.ActiveStrategyOverrides(Autorot.Bossmods.ActiveModule.StateMachine) ?? new uint[0]);
-            FillStrategyPositionals(_strategy, Rotation.GetNextPositional(_state, _strategy, _positional, _aoe), _state.TrueNorthLeft > _state.GCD);
+            FillStrategyPositionals(_strategy, Rotation.GetNextPositional(_state, _strategy, _aoe), _state.TrueNorthLeft > _state.GCD);
         }
 
         protected override void QueueAIActions()
@@ -109,7 +108,7 @@ namespace BossMod.SAM
         {
             if (Autorot.PrimaryTarget == null || AutoAction < AutoActionAIFight)
                 return new();
-            var aid = Rotation.GetNextBestGCD(_state, _strategy, _positional, _aoe);
+            var aid = Rotation.GetNextBestGCD(_state, _strategy, _aoe);
             return MakeResult(aid, Autorot.PrimaryTarget);
         }
 
@@ -120,9 +119,9 @@ namespace BossMod.SAM
 
             ActionID res = new();
             if (_state.CanWeave(deadline - _state.OGCDSlotLength)) // first ogcd slot
-                res = Rotation.GetNextBestOGCD(_state, _strategy, deadline - _state.OGCDSlotLength, _aoe, _positional);
+                res = Rotation.GetNextBestOGCD(_state, _strategy, deadline - _state.OGCDSlotLength, _aoe);
             if (!res && _state.CanWeave(deadline)) // second/only ogcd slot
-                res = Rotation.GetNextBestOGCD(_state, _strategy, deadline, _aoe, _positional);
+                res = Rotation.GetNextBestOGCD(_state, _strategy, deadline, _aoe);
             return MakeResult(res, Autorot.PrimaryTarget);
         }
 
@@ -153,6 +152,8 @@ namespace BossMod.SAM
             _state.TrueNorthLeft = StatusDetails(Player, SID.TrueNorth, Player.InstanceID).Left;
             _state.ClosestPositional = GetClosestPositional();
 
+            _state.TargetHPratio = TargetHPratio();
+            _state.isMoving = ActionManagerEx.Instance.InputOverride.IsMoving();
             _state.TargetHiganbanaLeft = StatusDetails(Autorot.PrimaryTarget, _state.ExpectedHiganbana, Player.InstanceID).Left;
         }
 
@@ -163,6 +164,16 @@ namespace BossMod.SAM
             SupportedSpell(AID.Fuga).PlaceholderForAuto = SupportedSpell(AID.Fuko).PlaceholderForAuto = _config.FullRotation ? AutoActionAOE : AutoActionNone;
 
             // combo replacement
+        }
+
+        private float TargetHPratio()
+        {
+            var target = Autorot.PrimaryTarget;
+            if (target != null)
+            {
+                return ((float)target.HP.Cur / (float)target.HP.Max) * 100;
+            }
+            return 0f;
         }
 
         private Positional GetClosestPositional()

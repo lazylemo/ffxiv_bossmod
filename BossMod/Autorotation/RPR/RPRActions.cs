@@ -13,7 +13,6 @@ namespace BossMod.RPR
         private bool _aoe;
         private Rotation.State _state;
         private Rotation.Strategy _strategy;
-        private bool lastActionisSoD;
 
         public Actions(Autorotation autorot, Actor player)
             : base(autorot, player, Definitions.UnlockQuests, Definitions.SupportedActions)
@@ -141,7 +140,7 @@ namespace BossMod.RPR
                 _state.ComboTimeLeft = 0;
 
 
-            _state.SoulReaverLeft = StatusDetails(Player, SID.SoulReaver, Player.InstanceID).Left;
+            _state.HasSoulReaver = Player.FindStatus(SID.SoulReaver) != null;
             _state.ImmortalSacrificeLeft = StatusDetails(Player, SID.ImmortalSacrifice, Player.InstanceID).Left;
             _state.ArcaneCircleLeft = StatusDetails(Player, SID.ArcaneCircle, Player.InstanceID).Left;
             _state.EnhancedGibbetLeft = StatusDetails(Player, SID.EnhancedGibbet, Player.InstanceID).Left;
@@ -149,7 +148,7 @@ namespace BossMod.RPR
             _state.EnhancedVoidReapingLeft = StatusDetails(Player, SID.EnhancedVoidReaping, Player.InstanceID).Left;
             _state.EnhancedCrossReapingLeft = StatusDetails(Player, SID.EnhancedCrossReaping, Player.InstanceID).Left;
             _state.EnhancedHarpeLeft = StatusDetails(Player, SID.EnhancedHarpe, Player.InstanceID).Left;
-            _state.EnshroudedLeft = StatusDetails(Player, SID.Enshrouded, Player.InstanceID).Left;
+            _state.HasEnshroud = Player.FindStatus(SID.Enshrouded) != null;
             _state.TrueNorthLeft = StatusDetails(Player, SID.TrueNorth, Player.InstanceID).Left;
             _state.BloodsownCircleLeft = StatusDetails(Player, SID.BloodsownCircle, Player.InstanceID).Left;
             _state.CircleofSacrificeLeft = StatusDetails(Player, SID.CircleofSacrifice, Player.InstanceID).Left;

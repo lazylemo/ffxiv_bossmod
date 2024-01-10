@@ -338,7 +338,9 @@ namespace BossMod.GNB
         public static bool ShouldUsePotion(State state, Strategy strategy) => strategy.PotionStrategy switch
         {
             Strategy.PotionUse.Manual => false,
-            Strategy.PotionUse.Immediate => (!Service.Config.Get<GNBConfig>().EarlyNoMercy && state.ComboLastMove == AID.KeenEdge && state.Ammo == 0) || (state.CD(CDGroup.NoMercy) < 5.5 && state.CD(CDGroup.Bloodfest) < 15 && strategy.CombatTimer > 30) || (Service.Config.Get<GNBConfig>().EarlyNoMercy && state.CD(CDGroup.NoMercy) < 5.5 && state.CD(CDGroup.Bloodfest) < 15),
+            Strategy.PotionUse.Immediate 
+            => (!Service.Config.Get<GNBConfig>().EarlyNoMercy && state.ComboLastMove == AID.KeenEdge && state.Ammo == 0) || (state.CD(CDGroup.NoMercy) < 5.5 && state.CD(CDGroup.Bloodfest) < 15 && strategy.CombatTimer > 30 && state.Ammo == 3) 
+            || (Service.Config.Get<GNBConfig>().EarlyNoMercy && state.CD(CDGroup.NoMercy) < 5.5 && state.CD(CDGroup.Bloodfest) < 15),
             Strategy.PotionUse.Special => state.ComboLastMove == AID.BrutalShell && state.Ammo == 3 && state.CD(CDGroup.NoMercy) < 3 && state.CD(CDGroup.Bloodfest) < 15,
             Strategy.PotionUse.Force => true,
             _ => false
@@ -383,7 +385,6 @@ namespace BossMod.GNB
                 return shouldUseRegularNoMercy || shouldUseSksCheck || justusewhenever;
             }
         }
-
 
         public static bool ShouldUseGnash(State state, Strategy strategy) => strategy.GnashUse switch
         {
@@ -567,8 +568,6 @@ namespace BossMod.GNB
         public static ActionID GetNextBestOGCD(State state, Strategy strategy, float deadline, bool aoe)
         {
             bool hasContinuation = state.ReadyToBlast || state.ReadyToGouge || state.ReadyToRip || state.ReadyToTear;
-            if (strategy.SpecialActionUse == Strategy.SpecialAction.LB3)
-                return ActionID.MakeSpell(AID.GunmetalSoul);
 
             bool wantRoughDivide = state.Unlocked(AID.RoughDivide) && state.TargetingEnemy && ShouldUseRoughDivide(state, strategy);
             if (wantRoughDivide && state.RangeToTarget > 3)
