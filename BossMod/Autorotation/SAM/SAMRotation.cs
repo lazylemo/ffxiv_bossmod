@@ -217,27 +217,102 @@ namespace BossMod.SAM
 
         //public static AID GetNextAOEComboAction(AID comboLastMove) => comboLastMove == AID.SpinningScythe ? AID.NightmareScythe : AID.SpinningScythe;
 
+        public static bool ShouldUseYukikaze(State state, Strategy strategy, bool aoe)
+        {
+            bool hasSetsu = state.Gauge.HasSetsu;
+            bool unlockedYukikaze = state.Unlocked(AID.Yukikaze);
+            bool hasFugetsu = state.FugetsuLeft > state.GCDTime * 4;
+            bool hasFuka = state.FukaLeft > state.GCDTime * 4;
+            bool higanbanaCondition1 = state.TargetHiganbanaLeft < state.GCD * 3 && !(state.SenCount == 1) && Service.Config.Get<SAMConfig>().TTKignoreHiganbanaOnly && strategy.HiganbanaStrategy != Strategy.HiganbanaUse.IgnoreTTK;
+            bool ttkCondition = state.TTK < 45 && state.SenCount != 3 && !Service.Config.Get<SAMConfig>().TTKignore;
+            bool senCountIs0 = state.SenCount == 0;
+            bool senCountIsNot3 = state.SenCount != 3;
+            bool senCountIs0AndHiganbanaCondition3 = state.SenCount == 0 && state.TargetHiganbanaLeft < state.GCDTime * 6 && state.CD(CDGroup.TsubameGaeshi) > state.GCDTime * 3;
+            bool senCountIs1AndHiganbanaCondition4 = state.SenCount == 1 && state.TargetHiganbanaLeft < state.GCDTime * 3;
+            bool senCountIs1AndHiganbanaCondition5 = state.SenCount == 0 && state.TargetHiganbanaLeft < state.GCDTime * 3;
+
+            if (!hasSetsu
+&& unlockedYukikaze
+&& hasFugetsu
+&& hasFuka
+&& senCountIs1AndHiganbanaCondition5)
+                return true;
+
+            if (!hasSetsu
+               && unlockedYukikaze
+               && hasFugetsu
+               && hasFuka
+               && senCountIs0AndHiganbanaCondition3)
+                return false;
+
+            if (!hasSetsu
+   && unlockedYukikaze
+   && hasFugetsu
+   && hasFuka
+   && senCountIs1AndHiganbanaCondition4)
+                return false;
+
+            if (!hasSetsu
+&& unlockedYukikaze
+&& hasFugetsu
+&& hasFuka
+&& higanbanaCondition1)
+                return true;
+
+            if (!hasSetsu
+&& unlockedYukikaze
+&& hasFugetsu
+&& hasFuka
+&& ttkCondition)
+                return true;
+
+            //            if (!hasSetsu
+            //&& unlockedYukikaze
+            //&& hasFugetsu
+            //&& hasFuka
+            //&& senCountIsNot3)
+            //                return true;
+
+            if (!hasSetsu
+&& unlockedYukikaze
+&& hasFugetsu
+&& hasFuka
+&& state.SenCount == 2)
+                return true;
+
+            //if (!hasSetsu
+            //    && unlockedYukikaze
+            //    && hasFugetsu
+            //    && hasFuka
+            //    && !senCountIs0AndHiganbanaCondition3
+            //    && !senCountIs1AndHiganbanaCondition4
+            //    && (higanbanaCondition1
+            //    || higanbanaCondition2
+            //    || ttkCondition
+            //    || senCountIs0
+            //    || senCountIsNot3
+            //    || senCountIs1AndHiganbanaCondition5))
+            //    return true;
+            return !hasSetsu && hasFugetsu && hasFuka;
+        }
+
         public static AID GetNextUnlockedComboAction(State state, Strategy strategy, bool aoe)
         {
             if (aoe && state.Unlocked(AID.Fuga))
             {
                 if (state.MeikyoShisuiLeft > state.AnimationLock)
                 {
-                    if (!state.Gauge.HasGetsu && state.Unlocked(AID.Mangetsu))
+                    if ((!state.Gauge.HasGetsu || !state.HasFugetsu) && state.Unlocked(AID.Mangetsu))
                         return AID.Mangetsu;
-                    if (!state.Gauge.HasKa && state.Unlocked(AID.Oka))
+                    if ((!state.Gauge.HasKa || !state.HasFuka) && state.Unlocked(AID.Oka))
                         return AID.Oka;
                 }
                 if (state.ComboLastMove == state.BestFuga)
                 {
-                    if (!state.Gauge.HasGetsu && state.Unlocked(AID.Mangetsu))
+                    if ((!state.Gauge.HasGetsu || !state.HasFugetsu) && state.Unlocked(AID.Mangetsu))
                         return AID.Mangetsu;
-                    if (!state.Gauge.HasKa && state.Unlocked(AID.Oka))
+                    if ((!state.Gauge.HasKa || !state.HasFuka) && state.Unlocked(AID.Oka))
                         return AID.Oka;
-                    if (state.BestIaijutsu == AID.TenkaGoken && state.Unlocked(AID.TenkaGoken))
-                    {
-                        return state.BestIaijutsu;
-                    }
                 }
                 return state.BestFuga;
             }
@@ -258,22 +333,29 @@ namespace BossMod.SAM
                 }
                 if (state.ComboLastMove == AID.Hakaze)
                 {
-                    if (!state.Gauge.HasSetsu
-                        && state.Unlocked(AID.Yukikaze)
-                        && state.HasFugetsu
-                        && state.HasFuka
-                        && ((state.TargetHiganbanaLeft < state.GCD * 2 && !(state.SenCount == 1) && Service.Config.Get<SAMConfig>().TTKignore && strategy.HiganbanaStrategy != Strategy.HiganbanaUse.IgnoreTTK)
-                        || (state.TargetHiganbanaLeft < state.GCD * 2 && (state.SenCount == 0))
-                        || (state.TTK < 45 && state.SenCount != 3 && !Service.Config.Get<SAMConfig>().TTKignore)
-                        || (state.SenCount == 0)
-                        || (state.SenCount != 3)))
+                    bool hasSetsu = state.Gauge.HasSetsu;
+                    bool unlockedYukikaze = state.Unlocked(AID.Yukikaze);
+                    bool hasFugetsu = state.HasFugetsu;
+                    bool hasFuka = state.HasFuka;
+                    bool higanbanaCondition1 = state.TargetHiganbanaLeft < state.GCD * 3 && !(state.SenCount == 1) && Service.Config.Get<SAMConfig>().TTKignore && strategy.HiganbanaStrategy != Strategy.HiganbanaUse.IgnoreTTK;
+                    bool higanbanaCondition2 = state.TargetHiganbanaLeft < state.GCD * 3 && (state.SenCount == 0);
+                    bool ttkCondition = state.TTK < 45 && state.SenCount != 3 && !Service.Config.Get<SAMConfig>().TTKignore;
+                    bool senCountIs0 = state.SenCount == 0;
+                    bool senCountIsNot3 = state.SenCount != 3;
+                    bool senCountIs0AndHiganbanaCondition3 = state.SenCount == 0 && state.TargetHiganbanaLeft < state.GCDTime * 6;
+                    bool senCountIs1AndHiganbanaCondition4 = state.SenCount == 1 && state.TargetHiganbanaLeft < state.GCDTime * 3;
+                    bool senCountIs1AndHiganbanaCondition5 = state.SenCount == 0 && state.TargetHiganbanaLeft < state.GCDTime * 3;
+
+                    if (ShouldUseYukikaze(state, strategy, aoe))
+                    {
                         return AID.Yukikaze;
-                    if ((state.FugetsuLeft <= state.FukaLeft || !state.HasFugetsu))
+                    }
+                    if (state.FugetsuLeft <= state.FukaLeft || !state.HasFugetsu)
                     {
                         if (state.Unlocked(AID.Jinpu))
                             return AID.Jinpu;
                     }
-                    if ((state.FukaLeft <= state.FugetsuLeft || !state.HasFuka))
+                    if (state.FukaLeft <= state.FugetsuLeft || !state.HasFuka)
                     {
                         if (state.Unlocked(AID.Shifu))
                             return AID.Shifu;
@@ -372,7 +454,9 @@ namespace BossMod.SAM
                 return true;
             if (state.HasFugetsu && state.HasFuka && !aoe && state.Gauge.Kaeshi == Kaeshi.SETSUGEKKA && state.CD(CDGroup.TsubameGaeshi) - 60 <= state.GCD && state.TTK < 20 && strategy.TsubameGaeshiStrategy != Strategy.TsubameUse.IgnoreTTK && !Service.Config.Get<SAMConfig>().TTKignore)
                 return true;
-            if (state.HasFugetsu && state.HasFuka && !aoe && state.Gauge.Kaeshi == Kaeshi.SETSUGEKKA && state.CD(CDGroup.TsubameGaeshi) <= state.GCD && state.CD(CDGroup.Ikishoten) < 65 && state.CD(CDGroup.Ikishoten) > 50)
+            if (state.HasFugetsu && state.HasFuka && !aoe && state.Gauge.Kaeshi == Kaeshi.SETSUGEKKA && state.CD(CDGroup.TsubameGaeshi) <= state.GCD && state.CD(CDGroup.Ikishoten) < 65 && state.CD(CDGroup.Ikishoten) > 50 && Service.Config.Get<SAMConfig>().Filler)
+                return true;
+            if (state.HasFugetsu && state.HasFuka && !aoe && state.Gauge.Kaeshi == Kaeshi.SETSUGEKKA && state.CD(CDGroup.TsubameGaeshi) - 60 <= state.GCD && state.CD(CDGroup.Ikishoten) < 65 && state.CD(CDGroup.Ikishoten) > 35 && strategy.PotionStrategy != Strategy.PotionUse.Opener && !(state.TargetHiganbanaLeft < state.GCDTime * 2) && !Service.Config.Get<SAMConfig>().Filler)
                 return true;
             if (state.HasFugetsu && state.HasFuka && aoe && state.Gauge.Kaeshi == Kaeshi.GOKEN && state.CD(CDGroup.TsubameGaeshi) - 60 <= state.GCD && (state.CD(CDGroup.Ikishoten) > 65 || state.CD(CDGroup.Ikishoten) <= 0))
                 return true;
@@ -387,13 +471,13 @@ namespace BossMod.SAM
                 return true;
             if (!aoe)
             {
-                if ( state.TargetHiganbanaLeft <= 5 && Service.Config.Get<SAMConfig>().TTKignoreHiganbanaOnly && Service.Config.Get<SAMConfig>().EarlyHiganbana)
+                if ((state.TargetHiganbanaLeft <= state.GCDTime * 2 || state.TargetHiganbanaLeft <= state.GCDTime * 2 && GetNextUnlockedComboAction(state, strategy, aoe) == AID.Yukikaze || state.TargetHiganbanaLeft <= state.GCDTime * 2 && GetNextUnlockedComboAction(state, strategy, aoe) == AID.Gekko || state.TargetHiganbanaLeft <= state.GCDTime * 2 && GetNextUnlockedComboAction(state, strategy, aoe) == AID.Kasha) && Service.Config.Get<SAMConfig>().TTKignoreHiganbanaOnly && Service.Config.Get<SAMConfig>().EarlyHiganbana)
                     return true;
-                if ( state.TargetHiganbanaLeft <= 5 && state.TTK > 45 && !Service.Config.Get<SAMConfig>().TTKignoreHiganbanaOnly && Service.Config.Get<SAMConfig>().EarlyHiganbana)
+                if ((state.TargetHiganbanaLeft <= state.GCDTime * 2 || state.TargetHiganbanaLeft <= state.GCDTime * 2 && GetNextUnlockedComboAction(state, strategy, aoe) == AID.Yukikaze || state.TargetHiganbanaLeft <= state.GCDTime * 2 && GetNextUnlockedComboAction(state, strategy, aoe) == AID.Gekko || state.TargetHiganbanaLeft <= state.GCDTime * 2 && GetNextUnlockedComboAction(state, strategy, aoe) == AID.Kasha) && state.TTK > 45 && !Service.Config.Get<SAMConfig>().TTKignoreHiganbanaOnly && Service.Config.Get<SAMConfig>().EarlyHiganbana)
                     return true;
-                if ( state.HasFugetsu && state.HasFuka && state.TargetHiganbanaLeft <= 5 && state.CD(CDGroup.TsubameGaeshi) > 10 && state.TTK > 45 && strategy.HiganbanaStrategy != Strategy.HiganbanaUse.IgnoreTTK && !Service.Config.Get<SAMConfig>().TTKignoreHiganbanaOnly && !Service.Config.Get<SAMConfig>().EarlyHiganbana)
+                if ((state.TargetHiganbanaLeft <= state.GCDTime * 2 || state.TargetHiganbanaLeft <= state.GCDTime * 2 && GetNextUnlockedComboAction(state, strategy, aoe) == AID.Yukikaze || state.TargetHiganbanaLeft <= state.GCDTime * 2 && GetNextUnlockedComboAction(state, strategy, aoe) == AID.Gekko || state.TargetHiganbanaLeft <= state.GCDTime * 2 && GetNextUnlockedComboAction(state, strategy, aoe) == AID.Kasha) && state.HasFugetsu && state.HasFuka && state.CD(CDGroup.TsubameGaeshi) > 10 && state.TTK > 45 && strategy.HiganbanaStrategy != Strategy.HiganbanaUse.IgnoreTTK && !Service.Config.Get<SAMConfig>().TTKignoreHiganbanaOnly && !Service.Config.Get<SAMConfig>().EarlyHiganbana)
                     return true;
-                if ( state.HasFugetsu && state.HasFuka && state.TargetHiganbanaLeft <= 5 && state.CD(CDGroup.TsubameGaeshi) > 10 && Service.Config.Get<SAMConfig>().TTKignoreHiganbanaOnly && !Service.Config.Get<SAMConfig>().EarlyHiganbana)
+                if ((state.TargetHiganbanaLeft <= state.GCDTime * 2 || state.TargetHiganbanaLeft <= state.GCDTime * 2 && GetNextUnlockedComboAction(state, strategy, aoe) == AID.Yukikaze || state.TargetHiganbanaLeft <= state.GCDTime * 2 && GetNextUnlockedComboAction(state, strategy, aoe) == AID.Gekko || state.TargetHiganbanaLeft <= state.GCDTime * 2 && GetNextUnlockedComboAction(state, strategy, aoe) == AID.Kasha) && state.HasFugetsu && state.HasFuka && state.CD(CDGroup.TsubameGaeshi) > 10 && Service.Config.Get<SAMConfig>().TTKignoreHiganbanaOnly && !Service.Config.Get<SAMConfig>().EarlyHiganbana)
                     return true;
                 if (state.HasFugetsu && state.HasFuka && strategy.HiganbanaStrategy != Strategy.HiganbanaUse.IgnoreTTK && !Service.Config.Get<SAMConfig>().TTKignoreHiganbanaOnly && state.TTK < 20 && state.CD(CDGroup.TsubameGaeshi) > 80 && state.OgiNamikiriReady < state.AnimationLock && state.Gauge.MeditationStacks == 2)
                     return true;
@@ -404,14 +488,14 @@ namespace BossMod.SAM
         public static bool ShouldUseSetsugekka(State state, Strategy strategy, bool aoe)
         {
             if (state.HasFugetsu && state.HasFuka && state.SenCount == 3
-                && ((state.CD(CDGroup.TsubameGaeshi) > 8 && !state.isMoving)
+                && ((state.CD(CDGroup.TsubameGaeshi) > state.GCDTime * 4 && !state.isMoving)
                 || (state.CD(CDGroup.Ikishoten) > 65 && state.CD(CDGroup.TsubameGaeshi) - 60 <= state.GCD)
-                || (state.CD(CDGroup.TsubameGaeshi) > 8 && state.TargetHiganbanaLeft <= state.GCDTime * 3)
-                || (state.CD(CDGroup.TsubameGaeshi) > 8 && state.isMoving && (GetNextUnlockedComboAction(state, strategy, aoe) == AID.Yukikaze || GetNextUnlockedComboAction(state, strategy, aoe) == AID.Gekko || GetNextUnlockedComboAction(state, strategy, aoe) == AID.Kasha || state.HasMeikyoShisui))))
+                || (state.CD(CDGroup.TsubameGaeshi) > state.GCDTime * 4 && state.TargetHiganbanaLeft <= state.GCDTime * 4)
+                || (state.CD(CDGroup.TsubameGaeshi) > state.GCDTime * 4 && state.isMoving && (GetNextUnlockedComboAction(state, strategy, aoe) == AID.Yukikaze || GetNextUnlockedComboAction(state, strategy, aoe) == AID.Gekko || GetNextUnlockedComboAction(state, strategy, aoe) == AID.Kasha || state.HasMeikyoShisui))))
                 return true;
-            if (state.HasFugetsu && state.HasFuka && state.SenCount == 3 && state.CD(CDGroup.TsubameGaeshi) < 8 && ((state.ComboLastMove == AID.Jinpu || state.ComboLastMove == AID.Shifu) || state.CD(CDGroup.TsubameGaeshi) < state.GCDTime))
+            if (state.HasFugetsu && state.HasFuka && state.CD(CDGroup.Ikishoten) < 15 && state.SenCount == 3 && state.CD(CDGroup.TsubameGaeshi) - 60 < state.GCDTime * 4 && ((state.ComboLastMove == AID.Jinpu || state.ComboLastMove == AID.Shifu) || state.CD(CDGroup.TsubameGaeshi) < state.GCDTime))
                 return true;
-            if (state.HasFugetsu && state.HasFuka && state.SenCount == 3 && state.CD(CDGroup.TsubameGaeshi) < 2.5f)
+            if (state.HasFugetsu && state.HasFuka && state.SenCount == 3 && state.CD(CDGroup.TsubameGaeshi) < state.GCDTime)
                 return true;
             return false;
         }
@@ -430,7 +514,7 @@ namespace BossMod.SAM
         {
             if (!aoe && state.Unlocked(AID.MeikyoShisui) && !state.HasMeikyoShisui && state.ComboTimeLeft == 0 && state.RangeToTarget < 5)
             {
-                if (state.TargetHiganbanaLeft <= state.GCDTime * 2 && state.SenCount == 0 && ShouldUseHiganbana(state,strategy,aoe))
+                if (state.TargetHiganbanaLeft <= state.GCDTime * 2 && state.SenCount == 0 && ShouldUseHiganbana(state, strategy, aoe))
                     return true;
 
                 if (state.TargetHiganbanaLeft <= state.GCDTime * 5 && state.SenCount == 1 && ShouldUseHiganbana(state, strategy, aoe))
@@ -448,17 +532,17 @@ namespace BossMod.SAM
                 if (state.CD(CDGroup.TsubameGaeshi) < state.GCDTime * (state.SenCount == 2 ? 2 : state.SenCount == 1 ? 3 : 4) && (state.SenCount == 1 || state.SenCount == 2) && state.SenCount != 3)
                     return true;
 
-                if ((state.CD(CDGroup.TsubameGaeshi) < 60 - state.GCDTime * 4 && state.CD(CDGroup.TsubameGaeshi) > 0) && state.CD(CDGroup.Ikishoten) < 119.9f && state.CD(CDGroup.Ikishoten) > 100f)
+                if ((state.CD(CDGroup.TsubameGaeshi) < 60 - state.GCDTime * 4 && state.CD(CDGroup.TsubameGaeshi) > 0) && state.CD(CDGroup.Ikishoten) < 119.9f && state.CD(CDGroup.Ikishoten) > 100f && state.Gauge.HasSetsu)
                     return true;
 
-               //if (state.CD(CDGroup.TsubameGaeshi) - 60 < state.GCD && state.CD(CDGroup.Ikishoten) > 95 && state.SenCount == 0 && !Service.Config.Get<SAMConfig>().Filler)
-                  //return true;
+                //if (state.CD(CDGroup.TsubameGaeshi) - 60 < state.GCD && state.CD(CDGroup.Ikishoten) > 95 && state.SenCount == 0 && !Service.Config.Get<SAMConfig>().Filler)
+                //return true;
 
                 if (state.TTK < 20 && !Service.Config.Get<SAMConfig>().TTKignore)
                     return true;
             }
 
-            if (aoe && state.Unlocked(AID.MeikyoShisui) && !state.HasMeikyoShisui && state.ComboTimeLeft == 0 && state.CD(CDGroup.TsubameGaeshi) > 0)
+            if (aoe && state.Unlocked(AID.MeikyoShisui) && !state.HasMeikyoShisui && state.ComboTimeLeft == 0 && state.CD(CDGroup.TsubameGaeshi) > 55)
                 return true;
 
             return false;
@@ -468,10 +552,10 @@ namespace BossMod.SAM
         public static bool ShouldUseShintenOrKyuten(State state, Strategy strategy, bool aoe)
         {
             bool isUnlockedHissatsuSenei = state.Unlocked(AID.HissatsuSenei);
-            bool useKenkiToUseIkishoten = state.Gauge.Kenki >= 50;
+            bool useKenkiToUseIkishoten = state.Gauge.Kenki > 50;
             bool isIkishotenReady = state.CD(CDGroup.Ikishoten) < state.GCDTime * 1;
             bool isHissatsuSeneiReady = state.CD(CDGroup.HissatsuSenei) < 100;
-            bool isKenkiGaugeFull = state.Gauge.Kenki + KenkiGaugeGainedFromAction(state, GetNextBestGCD(state, strategy, aoe)) > 85;
+            bool isKenkiGaugeFull = state.Gauge.Kenki + KenkiGaugeGainedFromAction(state, GetNextBestGCD(state, strategy, aoe)) > 90;
             bool isKenki25OrMore = state.Gauge.Kenki >= 25;
             bool isRaidBuffsLeft = state.RaidBuffsLeft > state.AnimationLock;
             bool isHissatsuSeneiInRange = state.CD(CDGroup.HissatsuSenei) < 119.9f && state.CD(CDGroup.HissatsuSenei) > 20;
@@ -524,7 +608,15 @@ namespace BossMod.SAM
             if (ShouldUseSetsugekka(state, strategy, aoe) && state.SenCount == 3)
                 return state.BestIaijutsu;
             if (ShouldUseHiganbana(state, strategy, aoe) && state.SenCount == 1)
-                return state.BestIaijutsu;
+            {
+                if (state.SenCount == 1 && state.TargetHiganbanaLeft < state.GCDTime * 1 && (GetNextUnlockedComboAction(state, strategy, aoe) != AID.Gekko || GetNextUnlockedComboAction(state, strategy, aoe) != AID.Kasha || GetNextUnlockedComboAction(state, strategy, aoe) != AID.Yukikaze))
+                    return state.BestIaijutsu;
+                if (state.SenCount == 1 && !state.HasMeikyoShisui && state.TargetHiganbanaLeft < state.GCDTime * 2 && (GetNextUnlockedComboAction(state, strategy, aoe) != AID.Gekko || GetNextUnlockedComboAction(state, strategy, aoe) != AID.Kasha || GetNextUnlockedComboAction(state, strategy, aoe) != AID.Yukikaze))
+                    return GetNextUnlockedComboAction(state, strategy, aoe);
+                if (state.ComboTimeLeft > 0 && state.TargetHiganbanaLeft < state.GCDTime * 2 && (GetNextUnlockedComboAction(state, strategy, aoe) != AID.Gekko || GetNextUnlockedComboAction(state, strategy, aoe) != AID.Kasha || GetNextUnlockedComboAction(state, strategy, aoe) != AID.Yukikaze))
+                    return state.BestIaijutsu;
+                else return state.BestIaijutsu;
+            }
             if (ShouldUseTenkaGoken(state, strategy, aoe) && state.SenCount == 2)
                 return state.BestIaijutsu;
 
@@ -558,7 +650,7 @@ namespace BossMod.SAM
                     Fillerdone = false;
             }
 
-            if (state.TargetHiganbanaLeft <= 5 && state.SenCount > 1 && state.SenCount != 3 && !state.HasMeikyoShisui && (GetNextBestGCD(state, strategy, aoe) != AID.Gekko || GetNextBestGCD(state, strategy, aoe) != AID.Kasha || GetNextBestGCD(state, strategy, aoe) != AID.Yukikaze) && state.CanWeave(CDGroup.Hagakure, 0.6f, deadline) && ShouldUseHiganbana(state, strategy, aoe) && !aoe)
+            if (state.TargetHiganbanaLeft <= state.GCDTime * 3 && state.SenCount > 1 && state.SenCount != 3 && !state.HasMeikyoShisui && (GetNextBestGCD(state, strategy, aoe) != AID.Gekko || GetNextBestGCD(state, strategy, aoe) != AID.Kasha || GetNextBestGCD(state, strategy, aoe) != AID.Yukikaze) && state.CanWeave(CDGroup.Hagakure, 0.6f, deadline) && ShouldUseHiganbana(state, strategy, aoe) && !aoe)
                 return ActionID.MakeSpell(AID.Hagakure);
             if (ShouldUseTrueNorth(state, strategy, aoe) && state.CanWeave(CDGroup.TrueNorth - 45, 0.6f, deadline) && !aoe && state.GCD < 0.7 && strategy.CombatTimer > -0.7f)
                 return ActionID.MakeSpell(AID.TrueNorth);
