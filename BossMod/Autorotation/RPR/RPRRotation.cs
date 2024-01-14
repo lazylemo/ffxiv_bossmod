@@ -25,6 +25,7 @@ namespace BossMod.RPR
             public float CircleofSacrificeLeft;
             public bool lastActionisSoD;
             public float TTK;
+            public float GCDTime;
 
             public AID Beststalk => EnhancedGallowsLeft > AnimationLock ? AID.UnveiledGallows
                 : EnhancedGibbetLeft > AnimationLock ? AID.UnveiledGibbet
@@ -525,11 +526,11 @@ namespace BossMod.RPR
             if (strategy.GaugeStrategy == Strategy.GaugeUse.ForceExtendDD && state.Unlocked(AID.ShadowofDeath) && !state.HasSoulReaver)
                 return aoe ? AID.WhorlofDeath : AID.ShadowofDeath;
 
-            if (strategy.PotionStrategy == Strategy.PotionUse.Special && state.HasSoulsow && (state.CD(CDGroup.ArcaneCircle) < 11.5 || state.CD(CDGroup.ArcaneCircle) > 115))
+            if (strategy.PotionStrategy == Strategy.PotionUse.Special && state.HasSoulsow && (state.CD(CDGroup.ArcaneCircle) < 12 || state.CD(CDGroup.ArcaneCircle) > 115))
             {
                 if (state.HasSoulReaver)
                     return GetNextBSAction(state, aoe);
-                if (state.CD(CDGroup.ArcaneCircle) < 11.5f && state.TargetDeathDesignLeft < 30 && !state.HasSoulReaver)
+                if (state.CD(CDGroup.ArcaneCircle) < 12 && state.TargetDeathDesignLeft < 30 && !state.HasSoulReaver)
                     return AID.ShadowofDeath;
                 if ((state.ComboTimeLeft != 0 || state.ComboTimeLeft == 0) && !state.HasEnshroud && !state.HasSoulReaver)
                     return GetNextUnlockedComboAction(state, aoe);
@@ -571,10 +572,11 @@ namespace BossMod.RPR
 
             if (state.HasEnshroud && !aoe)
             {
-                if ((state.LemureShroudCount == 4 && strategy.PotionStrategy == Strategy.PotionUse.Burst && !state.lastActionisSoD && state.PotionCD < 1 || state.LemureShroudCount == 3)
+                if ((state.LemureShroudCount == 5 && strategy.PotionStrategy == Strategy.PotionUse.Burst && !state.lastActionisSoD && state.PotionCD < 1 || state.LemureShroudCount == 3)
                     && state.CD(CDGroup.ArcaneCircle) < 9)
                     return AID.ShadowofDeath;
-                if ((state.LemureShroudCount == 4 && state.TargetDeathDesignLeft < 30 || state.LemureShroudCount == 3 && state.TargetDeathDesignLeft < 40) && strategy.PotionStrategy != Strategy.PotionUse.Burst
+                if ((state.LemureShroudCount == 5 && state.TargetDeathDesignLeft < 30 || state.LemureShroudCount == 3 && state.TargetDeathDesignLeft < 40) 
+                    && strategy.PotionStrategy != Strategy.PotionUse.Burst
                     && (!state.lastActionisSoD)
                     && state.CD(CDGroup.ArcaneCircle) < 9)
                     return AID.ShadowofDeath;
@@ -590,9 +592,9 @@ namespace BossMod.RPR
 
             if (state.HasEnshroud && aoe)
             {
-                if (state.CD(CDGroup.ArcaneCircle) < 6)
+                if (state.CD(CDGroup.ArcaneCircle) < 9)
                     return AID.WhorlofDeath;
-                if (state.Unlocked(AID.Communio) && state.LemureShroudCount == 1 && state.VoidShroudCount == 0)
+                if (state.Unlocked(AID.Communio) && state.LemureShroudCount == 1)
                     return AID.Communio;
 
                 return AID.GrimReaping;
@@ -626,7 +628,7 @@ namespace BossMod.RPR
 
             if (ShouldUsePotion(state, strategy) && state.CanWeave(state.PotionCD, 1.1f, deadline))
                 return CommonDefinitions.IDPotionStr;
-            if (ShouldUseTrueNorth(state, strategy) && state.CanWeave(CDGroup.TrueNorth - 45, 0.6f, deadline) && !aoe && state.GCD < 0.8)
+            if (ShouldUseTrueNorth(state, strategy) && state.CanWeave(CDGroup.TrueNorth - 45, 0.6f, deadline) && !aoe && state.GCD < 0.7)
                 return ActionID.MakeSpell(AID.TrueNorth);
             if (ShouldUseEnshroud(state, strategy) && state.Unlocked(AID.Enshroud) && state.CanWeave(CDGroup.Enshroud, 0.6f, deadline))
                 return ActionID.MakeSpell(AID.Enshroud);

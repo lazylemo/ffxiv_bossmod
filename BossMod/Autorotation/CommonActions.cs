@@ -468,19 +468,44 @@ namespace BossMod
             return -Math.Max(0.001f, Autorot.WorldState.Client.CountdownRemaining ?? float.MaxValue);
         }
 
+        private static DateTime combatStartTime;
+        private static ulong previousTargetId;
+        private static bool combatStartTimeCaptured;
+
         protected float TimeToKill()
         {
             var tar = Autorot.PrimaryTarget;
 
-            if (tar != null)
+            if (Player.InCombat && tar != null)
             {
-                float tarMaxHP = Autorot.PrimaryTarget.HP.Max;
-                float tarCurHP = Autorot.PrimaryTarget.HP.Cur;
+                if (!combatStartTimeCaptured || previousTargetId != tar.TargetID)
+                {
+                    combatStartTime = Autorot.WorldState.CurrentTime;  // Capture the initial time when entering combat or switching targets
+                    previousTargetId = tar.TargetID;  // Update previousTargetID with the current target's ID
+                    combatStartTimeCaptured = true;
+                }
 
-                return tarCurHP/((tarMaxHP - tarCurHP) / CombatTimer());
+                float tarMaxHP = tar.HP.Max;
+                float tarCurHP = tar.HP.Cur;
+
+                TimeSpan elapsed = DateTime.Now - combatStartTime;
+                float timeElapsed = (float)elapsed.TotalSeconds;
+                float timeToKill = tarCurHP / ((tarMaxHP - tarCurHP) / timeElapsed);
+
+                // Ensure timeToKill is positive
+                return timeToKill > 0 ? timeToKill : float.PositiveInfinity;
+            }
+            else if (tar == null)
+            {
+                // Do not reset combatStartTimeCaptured and previousTargetId when tar is null
+            }
+            else
+            {
+                combatStartTimeCaptured = false;  // Reset combatStartTimeCaptured when not in combat
             }
 
-            return 0f;
+            // Default return value when conditions are not met
+            return float.PositiveInfinity;
         }
     }
 }

@@ -30,8 +30,6 @@ namespace BossMod
         private delegate ref int GetRefValueDelegate(int vkCode);
         private GetRefValueDelegate _getKeyRef;
 
-        private IntPtr _forceDisableMovementPtr;
-        internal unsafe ref int ForceDisableMovement => ref *(int*)(_forceDisableMovementPtr + 4);
 
         public unsafe InputOverride()
         {

@@ -107,7 +107,7 @@ namespace BossMod
                 // spamming oGCD - enter emergency mode
                 _queue.Clear();
                 _queue.Add(new(action, target, targetPos, def, condition, expireAt));
-                _emergencyMode = true;
+                _emergencyMode = false;
             }
         }
 

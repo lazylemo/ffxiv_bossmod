@@ -8,5 +8,14 @@
 
         [PropertyDisplay("Should use Filler")]
         public bool Filler = true;
+
+        [PropertyDisplay("Ignore TTK")]
+        public bool TTKignore = true;
+
+        [PropertyDisplay("Ignore TTK only for Higanbana")]
+        public bool TTKignoreHiganbanaOnly = true;
+
+        [PropertyDisplay("Early Higanbana")]
+        public bool EarlyHiganbana = true;
     }
 }

@@ -128,15 +128,8 @@ namespace BossMod.SAM
         private void UpdatePlayerState()
         {
             FillCommonPlayerState(_state);
-            _state.Filler = (int)(_strategy.CombatTimer / 60) % 2 == 1 && _state.Gauge.Sen == Sen.SETSU && _state.MeikyoShisuiLeft < _state.AnimationLock && _state.TargetHiganbanaLeft >= 45;
+            _state.TTK = TimeToKill();
             var gauge = Service.JobGauges.Get<SAMGauge>();
-            _state.Oneseal = (gauge.HasKa && !gauge.HasGetsu && !gauge.HasSetsu) 
-                || (!gauge.HasKa && gauge.HasGetsu && !gauge.HasSetsu)
-                || (!gauge.HasKa && !gauge.HasGetsu && gauge.HasSetsu);
-            _state.Twoseal = (gauge.HasKa && gauge.HasGetsu && !gauge.HasSetsu)
-                || (!gauge.HasKa && gauge.HasGetsu && gauge.HasSetsu)
-                || (gauge.HasKa && !gauge.HasGetsu && gauge.HasSetsu);
-            _state.Threeseal = gauge.HasSetsu && gauge.HasGetsu && gauge.HasKa;
             _state.Gauge = gauge;
             if (_state.ComboLastMove == AID.Gekko || _state.ComboLastMove == AID.Kasha || _state.ComboLastMove == AID.Yukikaze || _state.ComboLastMove == AID.Mangetsu || _state.ComboLastMove == AID.Oka)
                 _state.ComboTimeLeft = 0;
@@ -152,7 +145,6 @@ namespace BossMod.SAM
             _state.TrueNorthLeft = StatusDetails(Player, SID.TrueNorth, Player.InstanceID).Left;
             _state.ClosestPositional = GetClosestPositional();
 
-            _state.TargetHPratio = TargetHPratio();
             _state.isMoving = ActionManagerEx.Instance.InputOverride.IsMoving();
             _state.TargetHiganbanaLeft = StatusDetails(Autorot.PrimaryTarget, _state.ExpectedHiganbana, Player.InstanceID).Left;
         }
@@ -164,16 +156,6 @@ namespace BossMod.SAM
             SupportedSpell(AID.Fuga).PlaceholderForAuto = SupportedSpell(AID.Fuko).PlaceholderForAuto = _config.FullRotation ? AutoActionAOE : AutoActionNone;
 
             // combo replacement
-        }
-
-        private float TargetHPratio()
-        {
-            var target = Autorot.PrimaryTarget;
-            if (target != null)
-            {
-                return ((float)target.HP.Cur / (float)target.HP.Max) * 100;
-            }
-            return 0f;
         }
 
         private Positional GetClosestPositional()
@@ -189,7 +171,12 @@ namespace BossMod.SAM
             };
         }
 
-            private bool WithoutDOT(Actor a) => Rotation.RefreshDOT(_state, StatusDetails(a, SID.Higanbana, Player.InstanceID).Left);
+        protected override void OnActionSucceeded(ActorCastEvent ev)
+        {
+            _state.lastActionisHagakure = ev.Action.Type == ActionType.Spell && (AID)ev.Action.ID is AID.Hagakure;
+        }
+
+        private bool WithoutDOT(Actor a) => Rotation.RefreshDOT(_state, StatusDetails(a, SID.Higanbana, Player.InstanceID).Left);
         private int NumTargetsHitByAOEGCD() => Autorot.Hints.NumPriorityTargetsInAOECircle(Player.Position, 5);
     }
 }

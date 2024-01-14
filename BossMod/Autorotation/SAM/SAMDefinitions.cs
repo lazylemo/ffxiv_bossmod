@@ -193,10 +193,10 @@ namespace BossMod.SAM
             SupportedActions.GCDCast(AID.Higanbana, 6, 1.8f);
             SupportedActions.GCD(AID.Gekko, 3);
             SupportedActions.OGCD(AID.ArmsLength, 0, CDGroup.ArmsLength, 120.0f).EffectDuration = 6;
-            SupportedActions.GCD(AID.Mangetsu, 0);
+            SupportedActions.GCD(AID.Mangetsu, 5);
             SupportedActions.GCD(AID.Kasha, 3);
-            SupportedActions.GCDCast(AID.TenkaGoken, 0, 1.8f);
-            SupportedActions.GCD(AID.Oka, 0);
+            SupportedActions.GCDCast(AID.TenkaGoken, 8, 1.8f);
+            SupportedActions.GCD(AID.Oka, 5);
             SupportedActions.GCDCast(AID.MidareSetsugekka, 6, 1.8f);
             SupportedActions.OGCDWithCharges(AID.MeikyoShisui, 0, CDGroup.MeikyoShisui, 55.0f, 2);
             SupportedActions.GCD(AID.Yukikaze, 3);
@@ -205,18 +205,18 @@ namespace BossMod.SAM
             SupportedActions.OGCD(AID.HissatsuGyoten, 20, CDGroup.HissatsuGyoten, 10.0f);
             SupportedActions.OGCD(AID.HissatsuYaten, 5, CDGroup.HissatsuYaten, 10.0f);
             SupportedActions.OGCD(AID.Meditate, 0, CDGroup.Meditate, 60.0f).EffectDuration = 15;
-            SupportedActions.OGCD(AID.HissatsuKyuten, 0, CDGroup.HissatsuKyuten, 1.0f);
+            SupportedActions.OGCD(AID.HissatsuKyuten, 5, CDGroup.HissatsuKyuten, 1.0f);
             SupportedActions.OGCD(AID.Hagakure, 0, CDGroup.Hagakure, 5.0f);
             SupportedActions.OGCD(AID.Ikishoten, 0, CDGroup.Ikishoten, 120.0f);
             SupportedActions.OGCD(AID.HissatsuGuren, 10, CDGroup.HissatsuGuren, 120.0f);
             SupportedActions.OGCD(AID.HissatsuSenei, 3, CDGroup.HissatsuSenei, 120.0f);
-            SupportedActions.OGCDWithCharges(AID.TsubameGaeshi, 0, CDGroup.TsubameGaeshi, 60.0f, 2);
+            SupportedActions.OGCDWithCharges(AID.TsubameGaeshi, 6, CDGroup.TsubameGaeshi, 60.0f, 2);
             SupportedActions.OGCDWithCharges(AID.KaeshiHiganbana, 6, CDGroup.KaeshiHiganbana, 60.0f, 2);
-            SupportedActions.OGCDWithCharges(AID.KaeshiGoken, 0, CDGroup.KaeshiGoken, 60.0f, 2);
+            SupportedActions.OGCDWithCharges(AID.KaeshiGoken, 8, CDGroup.KaeshiGoken, 60.0f, 2);
             SupportedActions.OGCDWithCharges(AID.KaeshiSetsugekka, 6, CDGroup.KaeshiSetsugekka, 60.0f, 2);
             SupportedActions.OGCD(AID.Shoha, 3, CDGroup.Shoha, 15.0f);
-            SupportedActions.OGCD(AID.ShohaII, 0, CDGroup.ShohaII, 15.0f);
-            SupportedActions.GCD(AID.Fuko, 0);
+            SupportedActions.OGCD(AID.ShohaII, 5, CDGroup.ShohaII, 15.0f);
+            SupportedActions.GCD(AID.Fuko, 5);
             SupportedActions.GCDCast(AID.OgiNamikiri, 8, 1.8f);
             SupportedActions.OGCD(AID.KaeshiNamikiri, 8, CDGroup.KaeshiNamikiri, 1.0f);
 

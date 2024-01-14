@@ -140,7 +140,7 @@ namespace BossMod.RPR
             if (_state.ComboLastMove == AID.InfernalSlice)
                 _state.ComboTimeLeft = 0;
 
-
+            _state.GCDTime = ActionManagerEx.Instance!.GCDTime();
             _state.HasSoulReaver = Player.FindStatus(SID.SoulReaver) != null;
             _state.ImmortalSacrificeLeft = StatusDetails(Player, SID.ImmortalSacrifice, Player.InstanceID).Left;
             _state.ArcaneCircleLeft = StatusDetails(Player, SID.ArcaneCircle, Player.InstanceID).Left;
