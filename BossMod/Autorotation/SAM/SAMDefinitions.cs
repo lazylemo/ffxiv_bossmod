@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 
 namespace BossMod.SAM
 {
@@ -98,12 +98,17 @@ namespace BossMod.SAM
     {
         None = 0,
         ThirdEye = 1232, // applied by Third Eye to self
-        MeikyoShisui = 1233, // applied by Meikyo Shisui to self
-        TrueNorth = 1250, // applied by True North to self
-        Fugetsu = 1298, // applied by Gekko, Jinpu to self
+        EnhancedEnpi = 1236, // applied by Hissatsu: Yaten to self
+        Fugetsu = 1298, // applied by Jinpu or Mangetsu to self, damage buff
+        Fuka = 1299, // applied by Shifu or Oka to self, haste
+        Meditate = 1231, // applied by Meditate to self, increases gauge
+        MeikyoShisui = 1233, // applied by Meikyo Shisui to self, perform combo actions without prerequisites
+        Higanbana = 1228, // applied by Higanbana to target, dot
         OgiNamikiriReady = 2959, // applied by Ikishoten to self
-        Higanbana = 1228, // applied by Higanbana to target
-        Fuka = 1299, // applied by Kasha, Shifu to self
+        TrueNorth = 1250, // applied by True North to self, ignore positionals
+        Bloodbath = 84, // applied by Bloodbath to self, lifesteal
+        Feint = 1195, // applied by Feint to target, 30% phys and -5% magic damage dealt
+        Stun = 2, // applied by Leg Sweep to target
     }
 
     public static class Definitions
@@ -176,6 +181,7 @@ namespace BossMod.SAM
         }
 
         public static Dictionary<ActionID, ActionDefinition> SupportedActions;
+
         static Definitions()
         {
             SupportedActions = CommonDefinitions.CommonActionData(CommonDefinitions.IDPotionStr);
@@ -219,7 +225,6 @@ namespace BossMod.SAM
             SupportedActions.GCD(AID.Fuko, 5);
             SupportedActions.GCDCast(AID.OgiNamikiri, 8, 1.8f);
             SupportedActions.OGCD(AID.KaeshiNamikiri, 8, CDGroup.KaeshiNamikiri, 1.0f);
-
         }
     }
 }

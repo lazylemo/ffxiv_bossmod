@@ -1,4 +1,4 @@
-﻿namespace BossMod
+namespace BossMod
 {
     [ConfigDisplay(Parent = typeof(AutorotationConfig))]
     class SAMConfig : ConfigNode

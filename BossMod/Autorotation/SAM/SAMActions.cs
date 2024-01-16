@@ -1,4 +1,4 @@
-﻿using Dalamud.Game.ClientState.JobGauge.Enums;
+using Dalamud.Game.ClientState.JobGauge.Enums;
 using Dalamud.Game.ClientState.JobGauge.Types;
 using System;
 using System.Linq;
@@ -14,7 +14,6 @@ namespace BossMod.SAM
         private bool _aoe;
         private Rotation.State _state;
         private Rotation.Strategy _strategy;
-
         public Actions(Autorotation autorot, Actor player)
             : base(autorot, player, Definitions.UnlockQuests, Definitions.SupportedActions)
         {
@@ -101,7 +100,6 @@ namespace BossMod.SAM
                 SimulateManualActionForAI(ActionID.MakeSpell(AID.SecondWind), Player, Player.InCombat && Player.HP.Cur < Player.HP.Max * 0.5f);
             if (_state.Unlocked(AID.Bloodbath))
                 SimulateManualActionForAI(ActionID.MakeSpell(AID.Bloodbath), Player, Player.InCombat && Player.HP.Cur < Player.HP.Max * 0.8f);
-            // TODO: true north...
         }
 
         protected override NextAction CalculateAutomaticGCD()
