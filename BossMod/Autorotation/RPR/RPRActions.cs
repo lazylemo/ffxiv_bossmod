@@ -129,6 +129,7 @@ namespace BossMod.RPR
         private void UpdatePlayerState()
         {
             FillCommonPlayerState(_state);
+            _state.TTK = TimeToKill();
             _state.HasSoulsow = Player.FindStatus(SID.Soulsow) != null;
 
             var gauge = Service.JobGauges.Get<RPRGauge>();
@@ -139,8 +140,8 @@ namespace BossMod.RPR
             if (_state.ComboLastMove == AID.InfernalSlice)
                 _state.ComboTimeLeft = 0;
 
-
-            _state.SoulReaverLeft = StatusDetails(Player, SID.SoulReaver, Player.InstanceID).Left;
+            _state.GCDTime = ActionManagerEx.Instance!.GCDTime();
+            _state.HasSoulReaver = Player.FindStatus(SID.SoulReaver) != null;
             _state.ImmortalSacrificeLeft = StatusDetails(Player, SID.ImmortalSacrifice, Player.InstanceID).Left;
             _state.ArcaneCircleLeft = StatusDetails(Player, SID.ArcaneCircle, Player.InstanceID).Left;
             _state.EnhancedGibbetLeft = StatusDetails(Player, SID.EnhancedGibbet, Player.InstanceID).Left;
@@ -148,7 +149,7 @@ namespace BossMod.RPR
             _state.EnhancedVoidReapingLeft = StatusDetails(Player, SID.EnhancedVoidReaping, Player.InstanceID).Left;
             _state.EnhancedCrossReapingLeft = StatusDetails(Player, SID.EnhancedCrossReaping, Player.InstanceID).Left;
             _state.EnhancedHarpeLeft = StatusDetails(Player, SID.EnhancedHarpe, Player.InstanceID).Left;
-            _state.EnshroudedLeft = StatusDetails(Player, SID.Enshrouded, Player.InstanceID).Left;
+            _state.HasEnshroud = Player.FindStatus(SID.Enshrouded) != null;
             _state.TrueNorthLeft = StatusDetails(Player, SID.TrueNorth, Player.InstanceID).Left;
             _state.BloodsownCircleLeft = StatusDetails(Player, SID.BloodsownCircle, Player.InstanceID).Left;
             _state.CircleofSacrificeLeft = StatusDetails(Player, SID.CircleofSacrifice, Player.InstanceID).Left;

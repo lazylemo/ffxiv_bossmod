@@ -15,6 +15,7 @@ namespace BossMod.GNB
             public bool ReadyToBlast; // 0 if buff not up, max 10
             public float AuroraLeft; // 0 if buff not up, max 18
             public int NumTargetsHitByAOE;
+            public float GCDTime;
 
             public int MaxCartridges;
             // upgrade paths
@@ -336,7 +337,9 @@ namespace BossMod.GNB
         public static bool ShouldUsePotion(State state, Strategy strategy) => strategy.PotionStrategy switch
         {
             Strategy.PotionUse.Manual => false,
-            Strategy.PotionUse.Immediate => (!Service.Config.Get<GNBConfig>().EarlyNoMercy && state.ComboLastMove == AID.KeenEdge && state.Ammo == 0) || (state.CD(CDGroup.NoMercy) < 5.5 && state.CD(CDGroup.Bloodfest) < 15 && strategy.CombatTimer > 30) || (Service.Config.Get<GNBConfig>().EarlyNoMercy && state.CD(CDGroup.NoMercy) < 5.5 && state.CD(CDGroup.Bloodfest) < 15),
+            Strategy.PotionUse.Immediate 
+            => (!Service.Config.Get<GNBConfig>().EarlyNoMercy && state.ComboLastMove == AID.KeenEdge && state.Ammo == 0) || (state.CD(CDGroup.NoMercy) < 5.5 && state.CD(CDGroup.Bloodfest) < 15 && strategy.CombatTimer > 30 && state.Ammo == 3) 
+            || (Service.Config.Get<GNBConfig>().EarlyNoMercy && state.CD(CDGroup.NoMercy) < 5.5 && state.CD(CDGroup.Bloodfest) < 15),
             Strategy.PotionUse.Special => state.ComboLastMove == AID.BrutalShell && state.Ammo == 3 && state.CD(CDGroup.NoMercy) < 3 && state.CD(CDGroup.Bloodfest) < 15,
             Strategy.PotionUse.Force => true,
             _ => false
@@ -381,7 +384,6 @@ namespace BossMod.GNB
                 return shouldUseRegularNoMercy || shouldUseSksCheck || justusewhenever;
             }
         }
-
 
         public static bool ShouldUseGnash(State state, Strategy strategy) => strategy.GnashUse switch
         {
@@ -521,13 +523,13 @@ namespace BossMod.GNB
             if (strategy.GaugeStrategy == Strategy.GaugeUse.LightningShotIfNotInMelee && state.RangeToTarget > 3)
                 return AID.LightningShot;
 
-            if (state.ReadyToBlast)
+            if (state.ReadyToBlast && state.GCD < 1.4)
                 return state.BestContinuation;
-            if (state.ReadyToGouge)
+            if (state.ReadyToGouge && state.GCD < 1.4)
                 return state.BestContinuation;
-            if (state.ReadyToTear)
+            if (state.ReadyToTear && state.GCD < 1.4)
                 return state.BestContinuation;
-            if (state.ReadyToRip)
+            if (state.ReadyToRip && state.GCD < 1.4)
                 return state.BestContinuation;
 
             if (strategy.GaugeStrategy == Strategy.GaugeUse.PenultimateComboThenSpend && state.ComboLastMove != AID.BrutalShell && state.ComboLastMove != AID.DemonSlice && (state.ComboLastMove != AID.BrutalShell || state.Ammo == state.MaxCartridges) && state.GunComboStep == 0)
@@ -565,8 +567,6 @@ namespace BossMod.GNB
         public static ActionID GetNextBestOGCD(State state, Strategy strategy, float deadline, bool aoe)
         {
             bool hasContinuation = state.ReadyToBlast || state.ReadyToGouge || state.ReadyToRip || state.ReadyToTear;
-            if (strategy.SpecialActionUse == Strategy.SpecialAction.LB3)
-                return ActionID.MakeSpell(AID.GunmetalSoul);
 
             bool wantRoughDivide = state.Unlocked(AID.RoughDivide) && state.TargetingEnemy && ShouldUseRoughDivide(state, strategy);
             if (wantRoughDivide && state.RangeToTarget > 3)
@@ -587,14 +587,6 @@ namespace BossMod.GNB
             if (state.Unlocked(AID.BowShock) && ShouldUseBow(state, strategy) && state.CanWeave(CDGroup.BowShock, 0.6f, deadline))
                 return ActionID.MakeSpell(AID.BowShock);
 
-            if (state.ReadyToBlast && state.Unlocked(AID.Hypervelocity))
-                return ActionID.MakeSpell(state.BestContinuation);
-            if (state.ReadyToGouge && state.Unlocked(AID.Continuation))
-                return ActionID.MakeSpell(state.BestContinuation);
-            if (state.ReadyToTear && state.Unlocked(AID.Continuation))
-                return ActionID.MakeSpell(state.BestContinuation);
-            if (state.ReadyToRip && state.Unlocked(AID.Continuation))
-                return ActionID.MakeSpell(state.BestContinuation);
 
             if (state.Unlocked(AID.Bloodfest) && state.CanWeave(CDGroup.Bloodfest, 0.6f, deadline) && ShouldUseFest(state, strategy))
                 return ActionID.MakeSpell(AID.Bloodfest);
@@ -607,6 +599,15 @@ namespace BossMod.GNB
 
             if (wantRoughDivide && state.CanWeave(state.CD(CDGroup.RoughDivide), 0.6f, deadline) && !state.Unlocked(AID.SonicBreak))
                 return ActionID.MakeSpell(AID.RoughDivide);
+
+            if (state.ReadyToBlast && state.Unlocked(AID.Hypervelocity))
+                return ActionID.MakeSpell(state.BestContinuation);
+            if (state.ReadyToGouge && state.Unlocked(AID.Continuation))
+                return ActionID.MakeSpell(state.BestContinuation);
+            if (state.ReadyToTear && state.Unlocked(AID.Continuation))
+                return ActionID.MakeSpell(state.BestContinuation);
+            if (state.ReadyToRip && state.Unlocked(AID.Continuation))
+                return ActionID.MakeSpell(state.BestContinuation);
 
             if (strategy.SpecialActionUse == Strategy.SpecialAction.StanceOn && state.CanWeave(state.CD(CDGroup.RoyalGuard), 0.6f, deadline) && state.GunComboStep == 0 && !state.HaveTankStance)
                 return ActionID.MakeSpell(AID.RoyalGuard);

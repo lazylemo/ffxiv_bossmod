@@ -12,7 +12,7 @@
         [PropertyDisplay("Execute preceeding action for aoe combo")]
         public bool AOECombos = true;
 
-        [PropertyDisplay("Smart targeting for Shirk and Heart of Corundum (target if friendly, otherwise mouseover if friendly, otherwise offtank if available)")]
+        [PropertyDisplay("Smart targeting for Shirk and Heart of Corundum (target if friendly, otherwise mouseover if friendly, otherwise offtank if available (only Shirk))")]
         public bool SmartHeartofCorundumShirkTarget = true;
 
         [PropertyDisplay("Use provoke on mouseover, if available and hostile")]

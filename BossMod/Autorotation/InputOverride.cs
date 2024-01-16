@@ -30,6 +30,7 @@ namespace BossMod
         private delegate ref int GetRefValueDelegate(int vkCode);
         private GetRefValueDelegate _getKeyRef;
 
+
         public unsafe InputOverride()
         {
             _kbprocHook = Service.Hook.HookFromSignature<KbprocDelegate>("48 89 5C 24 08 55 56 57 41 56 41 57 48 8D 6C 24 B0 48 81 EC 50 01 00 00 48 8B 05 ?? ?? ?? ?? 48 33 C4 48 89 45 40 4D 8B F9 49 8B D8 81 FA 00 01 00 00", KbprocDetour); // note: look for callers of GetKeyboardState
@@ -50,8 +51,8 @@ namespace BossMod
         }
 
         // TODO: reconsider...
-        public bool IsMoving() => Service.KeyState[VirtualKey.W] || Service.KeyState[VirtualKey.S] || Service.KeyState[VirtualKey.A] || Service.KeyState[VirtualKey.D] || GamepadOverridesEnabled && (GamepadOverrides[3] != 0 || GamepadOverrides[4] != 0);
-        public bool IsMoveRequested() => IsWindowActive() && (ReallyPressed(VirtualKey.W) || ReallyPressed(VirtualKey.S) || ReallyPressed(VirtualKey.A) || ReallyPressed(VirtualKey.D));
+        public bool IsMoving() => Service.KeyState[VirtualKey.W] || Service.KeyState[VirtualKey.S] || Service.KeyState[VirtualKey.A] || Service.KeyState[VirtualKey.D] || Service.KeyState[VirtualKey.Q] || Service.KeyState[VirtualKey.E] || GamepadOverridesEnabled && (GamepadOverrides[3] != 0 || GamepadOverrides[4] != 0);
+        public bool IsMoveRequested() => IsWindowActive() && (ReallyPressed(VirtualKey.W) || ReallyPressed(VirtualKey.S) || ReallyPressed(VirtualKey.A) || ReallyPressed(VirtualKey.D) || ReallyPressed(VirtualKey.Q) || ReallyPressed(VirtualKey.E));
 
         public bool IsBlocked() => _movementBlocked;
 
@@ -64,6 +65,8 @@ namespace BossMod
             Block(VirtualKey.S);
             Block(VirtualKey.A);
             Block(VirtualKey.D);
+            Block(VirtualKey.Q);
+            Block(VirtualKey.E);
             Service.Log("[InputOverride] Movement block started");
         }
 
@@ -76,6 +79,8 @@ namespace BossMod
             Unblock(VirtualKey.S);
             Unblock(VirtualKey.A);
             Unblock(VirtualKey.D);
+            Unblock(VirtualKey.Q);
+            Unblock(VirtualKey.E);
             Service.Log("[InputOverride] Movement block ended");
         }
 
@@ -116,7 +121,7 @@ namespace BossMod
                 _hwnd = hWnd;
                 Service.Log($"[InputOverride] Changing active hwnd to {hWnd:X}");
             }
-            if (_movementBlocked && uMsg == WM_KEYDOWN && (VirtualKey)wParam is VirtualKey.W or VirtualKey.S or VirtualKey.A or VirtualKey.D)
+            if (_movementBlocked && uMsg == WM_KEYDOWN && (VirtualKey)wParam is VirtualKey.W or VirtualKey.S or VirtualKey.A or VirtualKey.D or VirtualKey.Q or VirtualKey.E)
                 return;
             _kbprocHook.Original(hWnd, uMsg, wParam, lParam, uIdSubclass, dwRefData);
         }

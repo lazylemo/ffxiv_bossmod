@@ -114,6 +114,7 @@ namespace BossMod.GNB
             if (_state.ComboLastMove == AID.SolidBarrel)
                 _state.ComboTimeLeft = 0;
 
+            _state.GCDTime = ActionManagerEx.Instance!.GCDTime();
             _state.Ammo = Service.JobGauges.Get<GNBGauge>().Ammo;
             _state.GunComboStep = Service.JobGauges.Get<GNBGauge>().AmmoComboStep;
             _state.MaxCartridges = _state.Unlocked(TraitID.CartridgeChargeII) ? 3 : 2;
@@ -139,6 +140,7 @@ namespace BossMod.GNB
             SupportedSpell(AID.DemonSlaughter).TransformAction = _config.AOECombos ? () => ActionID.MakeSpell(Rotation.GetNextAOEComboAction(ComboLastMove)) : null;
 
             // smart targets
+            SupportedSpell(_state.BestHeart).TransformTarget = _config.SmartHeartofCorundumShirkTarget ? SmartTargetFriendly : null;
             SupportedSpell(AID.Shirk).TransformTarget = _config.SmartHeartofCorundumShirkTarget ? SmartTargetCoTank : null;
             SupportedSpell(AID.Provoke).TransformTarget = _config.ProvokeMouseover ? SmartTargetHostile : null; // TODO: also interject/low-blow
         }

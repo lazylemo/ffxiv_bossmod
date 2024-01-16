@@ -1,584 +1,684 @@
-// CONTRIB: made by xan, not checked
-using System;
-using System.Collections.Generic;
-using System.Runtime.CompilerServices;
 using Dalamud.Game.ClientState.JobGauge.Enums;
-using static BossMod.CommonRotation.Strategy;
-using static BossMod.SAM.Rotation.Strategy;
+using Dalamud.Game.ClientState.JobGauge.Types;
 
-// opener -> cooldown -> odd burst -> filler -> cooldown -> even burst -> cooldown
-// 0s                    60s                                120s
-
-// opener = gekko -> kasha -> yukikaze -> even burst
-
-// cooldown is 17 GCDs - 2x 8 GCDs for sen, plus one midare cast
-// each burst window starts 1 GCD before we gain a tsubame charge
-// odd min is 9 GCDs
-//   midare -> kaeshi -> moon -> higanbana -> moon -> flower -> hakaze -> ice -> midare
-// even is 11 GCDs
-//   midare -> kaeshi -> moon -> higanbana -> ogi -> kaeshi -> moon -> flower -> hakaze -> ice -> midare
 namespace BossMod.SAM
 {
     public static class Rotation
     {
-        public class State(float[] cooldowns) : CommonRotation.PlayerState(cooldowns)
+        internal static bool Fillerdone = false;
+        public class State : CommonRotation.PlayerState
         {
-            public int MeditationStacks; // 3 max
-            public int Kenki; // 100 max, changes by 5
-            public Kaeshi Kaeshi; // see SAMGauge.Kaeshi
-            public float FukaLeft; // 40 max
-            public float FugetsuLeft; // 40 max
-            public float TrueNorthLeft; // 10 max
-            public float MeikyoLeft; // 15 max
-            public float TargetHiganbanaLeft; // 60 max
-            public float OgiNamikiriLeft; // 30 max
-            public float EnhancedEnpiLeft; // 15 max
-            public bool HasIceSen;
-            public bool HasMoonSen;
-            public bool HasFlowerSen;
+            public float FugetsuLeft;
+            public float FukaLeft;
+            public float OgiNamikiriReady;
+            public float MeikyoShisuiLeft;
+            public float TrueNorthLeft;
+            public SAMGauge Gauge;
+            public float TargetHiganbanaLeft;
+            public bool HasFuka;
+            public bool HasFugetsu;
+            public bool HasMeikyoShisui;
+            public float GCDTime;
+            public bool isMoving;
+            public float TTK;
+            public bool lastActionisHagakure;
 
-            public float GCDTime; // TODO: should be moved to base state
-            public float LastTsubame; // can be infinite
-
-            // for action selection during meikyo if both combo enders are usable.
-            // doesn't check whether you're in melee range or not
             public Positional ClosestPositional;
+            public int SenCount => (Gauge.HasSetsu ? 1 : 0) + (Gauge.HasGetsu ? 1 : 0) + (Gauge.HasKa ? 1 : 0);
 
-            public int SenCount =>
-                (HasIceSen ? 1 : 0) + (HasMoonSen ? 1 : 0) + (HasFlowerSen ? 1 : 0);
-
-            public float CastTime => Unlocked(TraitID.EnhancedIaijutsu) ? 1.3f : 1.8f;
-
-            public bool HasCombatBuffs => FukaLeft > GCD && FugetsuLeft > GCD;
-            public bool InCombo =>
-                ComboTimeLeft > GCD
-                && ComboLastMove is AID.Fuko or AID.Fuga or AID.Hakaze or AID.Jinpu or AID.Shifu;
-
-            public float NextMeikyoCharge =>
-                CD(CDGroup.MeikyoShisui) - (Unlocked(TraitID.EnhancedMeikyoShisui) ? 55 : 0);
-            public float NextTsubameCharge =>
-                CD(CDGroup.TsubameGaeshi) - (Unlocked(TraitID.EnhancedTsubame) ? 60 : 0);
+            public AID BestIaijutsu => SenCount == 1 ? AID.Higanbana
+                : SenCount == 2 ? AID.TenkaGoken
+                : SenCount == 3 ? AID.MidareSetsugekka
+                : AID.Iaijutsu;
+            public AID BestTsubame => Gauge.Kaeshi == Kaeshi.HIGANBANA ? AID.KaeshiHiganbana
+                : Gauge.Kaeshi == Kaeshi.GOKEN ? AID.KaeshiGoken
+                : Gauge.Kaeshi == Kaeshi.SETSUGEKKA ? AID.KaeshiSetsugekka
+                : Gauge.Kaeshi == Kaeshi.NAMIKIRI ? AID.KaeshiNamikiri
+                : AID.TsubameGaeshi;
+            public SID ExpectedHiganbana => SID.Higanbana;
+            public AID BestFuga => Unlocked(TraitID.FugaMastery) ? AID.Fuko : AID.Fuga;
+            public AID ComboLastMove => (AID)ComboLastAction;
+            public State(float[] cooldowns) : base(cooldowns) { }
 
             public bool Unlocked(AID aid) => Definitions.Unlocked(aid, Level, UnlockProgress);
-
             public bool Unlocked(TraitID tid) => Definitions.Unlocked(tid, Level, UnlockProgress);
-
-            public AID ComboLastMove => (AID)ComboLastAction;
-
-            public AID AOEStarter => Unlocked(AID.Fuko) ? AID.Fuko : AID.Fuga;
 
             public override string ToString()
             {
-                var senReadable = new List<string>();
-                if (HasIceSen)
-                    senReadable.Add("Ice");
-                if (HasMoonSen)
-                    senReadable.Add("Moon");
-                if (HasFlowerSen)
-                    senReadable.Add("Flower");
-
-                return $"Sen=[{string.Join(",", senReadable)}], H={TargetHiganbanaLeft}, K={Kenki}, M={MeditationStacks}, Kae={Kaeshi}, TCD={CD(CDGroup.TsubameGaeshi)}, MCD={CD(CDGroup.MeikyoShisui)}, Fuka={FukaLeft:f3}, Fugetsu={FugetsuLeft:f3}, TN={TrueNorthLeft:f3}, PotCD={PotionCD:f3}, GCDT={GCDTime:f3}, GCD={GCD:f3}, ALock={AnimationLock:f3}+{AnimationLockDelay:f3}, lvl={Level}/{UnlockProgress}";
+                return $"SenGauge={Gauge.Sen}, SenCount={SenCount} Moving={isMoving}, Ikishoten={CD(CDGroup.Ikishoten)}, Meikyo={MeikyoShisuiLeft}, FillerStatus={Fillerdone} Kenki={Gauge.Kenki} RB={RaidBuffsLeft:f1}, GCDTime={GCDTime} Higanbana={TargetHiganbanaLeft:f1}, TsubameCD={CD(CDGroup.TsubameGaeshi)}, PotCD={PotionCD:f1}, GCD={GCD:f3}, ALock={AnimationLock:f3}+{AnimationLockDelay:f3}, lvl={Level}/{UnlockProgress}, TTK={TTK}";
             }
         }
 
+        // strategy configuration
         public class Strategy : CommonRotation.Strategy
         {
-            public enum KenkiUse : uint
+            public int NumAOEGCDTargets;
+            public bool UseAOERotation;
+
+            public override string ToString()
             {
-                [PropertyDisplay(
-                    "Spend all kenki when in raid buff window, otherwise prevent overcap"
-                )]
-                Automatic = 0,
-
-                [PropertyDisplay("Always spend kenki at 25")]
-                Force = 1,
-
-                [PropertyDisplay("Always spend kenki at 35, reserving 10 for mobility")]
-                ForceDash = 2,
-
-                [PropertyDisplay("Forbid automatic kenki spending")]
-                Never = 3
+                return $"AOE={NumAOEGCDTargets}, no-dots={ForbidDOTs}";
             }
 
-            public KenkiUse KenkiStrategy;
-
-            public enum EnpiUse : uint
+            public enum GaugeUse : uint
             {
-                [PropertyDisplay("Use when outside melee range if Enhanced Enpi is active")]
                 Automatic = 0,
 
-                [PropertyDisplay("Use when outside melee range, even if unbuffed")]
-                Ranged = 1,
+                [PropertyDisplay("Force extend Higanbana Target Debuff, potentially overcapping Higanbana", 0x80ff00ff)]
+                ForceExtendDD = 1,
 
-                [PropertyDisplay("Never automatically suse")]
-                Never = 2
+                [PropertyDisplay("Use Enpi if outside melee", 0x80c08000)]
+                EnpiIfNotInMelee = 2,
             }
 
-            public EnpiUse EnpiStrategy;
-
-            public enum DashUse : uint
+            public enum TrueNorthUse : uint
             {
-                [PropertyDisplay("Use as a damage skill during raid buffs")]
                 Automatic = 0,
 
-                [PropertyDisplay("Never automatically use", 0xff000080)]
-                Never = 1,
-
-                [PropertyDisplay("Use as a gap closer if outside melee range", 0xff800080)]
-                UseOutsideMelee = 2
-            }
-
-            public DashUse DashStrategy;
-
-            public enum MeikyoUse : uint
-            {
-                [PropertyDisplay("Use after Tsubame during Higanbana refresh")]
-                Automatic = 0,
-
-                [PropertyDisplay("Never automatically use", 0xff000080)]
-                Never = 1,
-
-                [PropertyDisplay("Force use after the next weaponskill combo ender", 0xff800080)]
+                [PropertyDisplay("Delay", 0x800000ff)]
+                Delay = 1,
+                [PropertyDisplay("Force", 0x8000ff00)]
                 Force = 2,
-
-                [PropertyDisplay("Force use even if a combo is in progress", 0xff008080)]
-                ForceBreakCombo = 3
             }
-
-            public MeikyoUse MeikyoStrategy;
 
             public enum HiganbanaUse : uint
             {
                 Automatic = 0,
 
-                [PropertyDisplay("Never use", 0xff000080)]
-                Never = 1,
+                [PropertyDisplay("Delay", 0x800000ff)]
+                Delay = 1,
+                [PropertyDisplay("Force", 0x8000ff00)]
+                Force = 2,
+                [PropertyDisplay("Ignore TTK", 0x800000ff)]
+                IgnoreTTK = 3,
+            }
 
-                [PropertyDisplay("Ignore downtime prediction", 0xff008080)]
-                Eager = 2,
+            public enum TsubameUse : uint
+            {
+                Automatic = 0,
+
+                [PropertyDisplay("Delay", 0x800000ff)]
+                Delay = 1,
+                [PropertyDisplay("Force", 0x8000ff00)]
+                Force = 2,
+                [PropertyDisplay("Ignore TTK", 0x800000ff)]
+                IgnoreTTK = 3,
+            }
+
+            public enum OgiUse : uint
+            {
+                Automatic = 0,
+
+                [PropertyDisplay("Delay", 0x800000ff)]
+                Delay = 1,
+                [PropertyDisplay("Force", 0x8000ff00)]
+                Force = 2,
+                [PropertyDisplay("Ignore TTK", 0x800000ff)]
+                IgnoreTTK = 3,
+            }
+
+            public enum PotionUse : uint
+            {
+                Manual = 0, // potion won't be used automatically
+
+                [PropertyDisplay("Opener", 0x8000ff00)]
+                Opener = 1,
+
+                [PropertyDisplay("Force", 0x800000ff)]
+                Force = 2,
+            }
+
+            public enum SpecialAction : uint
+            {
+                None = 0, // don't use any special actions
             }
 
             public HiganbanaUse HiganbanaStrategy;
-
-            // setting this to Force will make iaijutsu get used during position-lock windows
-            public OffensiveAbilityUse IaijutsuUse;
-
-            public OffensiveAbilityUse TrueNorthUse;
-
-            public bool UseAOERotation;
+            public TsubameUse TsubameGaeshiStrategy;
+            public OgiUse OgiNamikiriStrategy;
+            public GaugeUse GaugeStrategy; // how are we supposed to handle gauge
+            public PotionUse PotionStrategy; // how are we supposed to use potions
+            public SpecialAction SpecialActionUse;
+            public TrueNorthUse TrueNorthStrategy;
+            public bool Aggressive;
 
             public void ApplyStrategyOverrides(uint[] overrides)
             {
-                if (overrides.Length >= 6)
+                if (overrides.Length >= 7)
                 {
-                    TrueNorthUse = (OffensiveAbilityUse)overrides[0];
-                    IaijutsuUse = (OffensiveAbilityUse)overrides[1];
-                    HiganbanaStrategy = (HiganbanaUse)overrides[2];
-                    MeikyoStrategy = (MeikyoUse)overrides[3];
-                    DashStrategy = (DashUse)overrides[4];
-                    EnpiStrategy = (EnpiUse)overrides[5];
-                    KenkiStrategy = (KenkiUse)overrides[6];
+                    HiganbanaStrategy = (HiganbanaUse)overrides[0];
+                    TsubameGaeshiStrategy = (TsubameUse)overrides[1];
+                    OgiNamikiriStrategy = (OgiUse)overrides[2];
+                    GaugeStrategy = (GaugeUse)overrides[3];
+                    TrueNorthStrategy = (TrueNorthUse)overrides[4];
+                    PotionStrategy = (PotionUse)overrides[5];
+                    SpecialActionUse = (SpecialAction)overrides[6];
                 }
                 else
                 {
-                    TrueNorthUse = OffensiveAbilityUse.Automatic;
-                    IaijutsuUse = OffensiveAbilityUse.Automatic;
                     HiganbanaStrategy = HiganbanaUse.Automatic;
-                    MeikyoStrategy = MeikyoUse.Automatic;
-                    DashStrategy = DashUse.Automatic;
-                    EnpiStrategy = EnpiUse.Automatic;
-                    KenkiStrategy = KenkiUse.Automatic;
+                    TsubameGaeshiStrategy = TsubameUse.Automatic;
+                    OgiNamikiriStrategy = OgiUse.Automatic;
+                    GaugeStrategy = GaugeUse.Automatic;
+                    TrueNorthStrategy = TrueNorthUse.Automatic;
+                    PotionStrategy = PotionUse.Manual;
+                    SpecialActionUse = SpecialAction.None;
                 }
             }
         }
 
-        private static AID ImminentKaeshi(State state)
+        public static int KenkiGaugeGainedFromAction(State state, AID action) => action switch
         {
-            if (state.Kaeshi == Kaeshi.NAMIKIRI)
-            {
-                // namikiri is not tied to tsubame cooldown
-                return AID.KaeshiNamikiri;
-            }
-            else if (state.NextTsubameCharge <= state.GCD)
-            {
-                // will have tsubame on next gcd
-                return state.Kaeshi switch
-                {
-                    Kaeshi.GOKEN => AID.KaeshiGoken,
-                    Kaeshi.SETSUGEKKA => AID.KaeshiSetsugekka,
-                    // higanbana is worthless
-                    _ => AID.None
-                };
-            }
+            AID.Hakaze or AID.Jinpu or AID.Shifu => 5,
+            AID.Gekko or AID.Kasha => 10,
+            AID.Yukikaze => 15,
+            AID.Ikishoten => 50,
+            AID.ThirdEye => 10,
+            AID.Hagakure => state.SenCount == 1 ? 10 : state.SenCount == 2 ? 20 : state.SenCount == 3 ? 30 : 0,
+            _ => 0
+        };
 
-            return AID.None;
+        public static int KenkiGaugeGainedFromOGCD(State state, ActionID action)
+        {
+            switch (action)
+            {
+                case ActionID x when x.ID == (uint)AID.Ikishoten:
+                    return 50;
+                case ActionID x when x.ID == (uint)AID.ThirdEye:
+                    return 10;
+                case ActionID x when x.ID == (uint)AID.Hagakure && state.SenCount == 1:
+                    return 10;
+                case ActionID x when x.ID == (uint)AID.Hagakure && state.SenCount == 2:
+                    return 20;
+                case ActionID x when x.ID == (uint)AID.Hagakure && state.SenCount == 3:
+                    return 30;
+                default:
+                    return 0;
+            }
         }
 
-        private static bool CanCast(State state, Strategy strategy)
+        //public static AID GetNextSTComboAction(AID comboLastMove, AID finisher) => comboLastMove switch
+        //{
+        //    AID.WaxingSlice => finisher,
+        //    AID.Slice => AID.WaxingSlice,
+        //    _ => AID.Slice
+        //};
+
+        //public static int GetSTComboLength(AID comboLastMove) => comboLastMove switch
+        //{
+        //    AID.WaxingSlice => 1,
+        //    AID.Slice => 2,
+        //    _ => 3
+        //};
+
+        //public static int GetAOEComboLength(AID comboLastMove) => comboLastMove == AID.SpinningScythe ? 1 : 2;
+
+        //public static AID GetNextMaimComboAction(AID comboLastMove) => comboLastMove == AID.Slice ? AID.WaxingSlice : AID.Slice;
+
+        //public static AID GetNextAOEComboAction(AID comboLastMove) => comboLastMove == AID.SpinningScythe ? AID.NightmareScythe : AID.SpinningScythe;
+
+        public static bool ShouldUseYukikaze(State state, Strategy strategy, bool aoe)
         {
-            if (strategy.IaijutsuUse == OffensiveAbilityUse.Force)
+            bool hasSetsu = state.Gauge.HasSetsu;
+            bool unlockedYukikaze = state.Unlocked(AID.Yukikaze);
+            bool hasFugetsu = state.FugetsuLeft > state.GCDTime * 4;
+            bool hasFuka = state.FukaLeft > state.GCDTime * 4;
+            bool higanbanaCondition1 = state.TargetHiganbanaLeft < state.GCD * 3 && !(state.SenCount == 1) && Service.Config.Get<SAMConfig>().TTKignoreHiganbanaOnly && strategy.HiganbanaStrategy != Strategy.HiganbanaUse.IgnoreTTK;
+            bool ttkCondition = state.TTK < 45 && state.SenCount != 3 && !Service.Config.Get<SAMConfig>().TTKignore;
+            bool senCountIs0 = state.SenCount == 0;
+            bool senCountIsNot3 = state.SenCount != 3;
+            bool senCountIs0AndHiganbanaCondition3 = state.SenCount == 0 && state.TargetHiganbanaLeft < state.GCDTime * 6 && state.CD(CDGroup.TsubameGaeshi) > state.GCDTime * 3;
+            bool senCountIs1AndHiganbanaCondition4 = state.SenCount == 1 && state.TargetHiganbanaLeft < state.GCDTime * 3;
+            bool senCountIs1AndHiganbanaCondition5 = state.SenCount == 0 && state.TargetHiganbanaLeft < state.GCDTime * 3;
+
+            if (!hasSetsu
+&& unlockedYukikaze
+&& hasFugetsu
+&& hasFuka
+&& senCountIs1AndHiganbanaCondition5)
                 return true;
-            if (strategy.IaijutsuUse == OffensiveAbilityUse.Delay)
+
+            if (!hasSetsu
+               && unlockedYukikaze
+               && hasFugetsu
+               && hasFuka
+               && senCountIs0AndHiganbanaCondition3)
                 return false;
 
-            return strategy.ForceMovementIn >= state.GCD + state.CastTime;
+            if (!hasSetsu
+   && unlockedYukikaze
+   && hasFugetsu
+   && hasFuka
+   && senCountIs1AndHiganbanaCondition4)
+                return false;
+
+            if (!hasSetsu
+&& unlockedYukikaze
+&& hasFugetsu
+&& hasFuka
+&& higanbanaCondition1)
+                return true;
+
+            if (!hasSetsu
+&& unlockedYukikaze
+&& hasFugetsu
+&& hasFuka
+&& ttkCondition)
+                return true;
+
+            //            if (!hasSetsu
+            //&& unlockedYukikaze
+            //&& hasFugetsu
+            //&& hasFuka
+            //&& senCountIsNot3)
+            //                return true;
+
+            if (!hasSetsu
+&& unlockedYukikaze
+&& hasFugetsu
+&& hasFuka
+&& state.SenCount == 2)
+                return true;
+
+            //if (!hasSetsu
+            //    && unlockedYukikaze
+            //    && hasFugetsu
+            //    && hasFuka
+            //    && !senCountIs0AndHiganbanaCondition3
+            //    && !senCountIs1AndHiganbanaCondition4
+            //    && (higanbanaCondition1
+            //    || higanbanaCondition2
+            //    || ttkCondition
+            //    || senCountIs0
+            //    || senCountIsNot3
+            //    || senCountIs1AndHiganbanaCondition5))
+            //    return true;
+            return !hasSetsu && hasFugetsu && hasFuka;
         }
 
-        public static AID GetNextBestGCD(State state, Strategy strategy)
+        public static AID GetNextUnlockedComboAction(State state, Strategy strategy, bool aoe)
         {
+            if (aoe && state.Unlocked(AID.Fuga))
+            {
+                if (state.MeikyoShisuiLeft > state.AnimationLock)
+                {
+                    if ((!state.Gauge.HasGetsu || !state.HasFugetsu) && state.Unlocked(AID.Mangetsu))
+                        return AID.Mangetsu;
+                    if ((!state.Gauge.HasKa || !state.HasFuka) && state.Unlocked(AID.Oka))
+                        return AID.Oka;
+                }
+                if (state.ComboLastMove == state.BestFuga)
+                {
+                    if ((!state.Gauge.HasGetsu || !state.HasFugetsu) && state.Unlocked(AID.Mangetsu))
+                        return AID.Mangetsu;
+                    if ((!state.Gauge.HasKa || !state.HasFuka) && state.Unlocked(AID.Oka))
+                        return AID.Oka;
+                }
+                return state.BestFuga;
+            }
+            else
+            {
+                if (state.MeikyoShisuiLeft > state.AnimationLock)
+                {
+                    if (!state.Gauge.HasGetsu && state.HasFuka && state.HasFugetsu && state.ClosestPositional == Positional.Rear && state.Unlocked(AID.Gekko))
+                        return AID.Gekko;
+                    if (!state.Gauge.HasKa && state.HasFuka && state.HasFugetsu && state.ClosestPositional == Positional.Flank && state.Unlocked(AID.Kasha))
+                        return AID.Kasha;
+                    if ((!state.Gauge.HasGetsu && (state.HasFuka && state.HasFugetsu && strategy.NextPositionalCorrect || state.FugetsuLeft <= state.FukaLeft || !state.HasFugetsu)) && state.Unlocked(AID.Gekko))
+                        return AID.Gekko;
+                    if ((!state.Gauge.HasKa && (state.HasFuka && state.HasFugetsu && strategy.NextPositionalCorrect || state.FukaLeft <= state.FugetsuLeft || !state.HasFuka)) && state.Unlocked(AID.Kasha))
+                        return AID.Kasha;
+                    if (!state.Gauge.HasSetsu && state.Unlocked(AID.Yukikaze))
+                        return AID.Yukikaze;
+                }
+                if (state.ComboLastMove == AID.Hakaze)
+                {
+                    bool hasSetsu = state.Gauge.HasSetsu;
+                    bool unlockedYukikaze = state.Unlocked(AID.Yukikaze);
+                    bool hasFugetsu = state.HasFugetsu;
+                    bool hasFuka = state.HasFuka;
+                    bool higanbanaCondition1 = state.TargetHiganbanaLeft < state.GCD * 3 && !(state.SenCount == 1) && Service.Config.Get<SAMConfig>().TTKignore && strategy.HiganbanaStrategy != Strategy.HiganbanaUse.IgnoreTTK;
+                    bool higanbanaCondition2 = state.TargetHiganbanaLeft < state.GCD * 3 && (state.SenCount == 0);
+                    bool ttkCondition = state.TTK < 45 && state.SenCount != 3 && !Service.Config.Get<SAMConfig>().TTKignore;
+                    bool senCountIs0 = state.SenCount == 0;
+                    bool senCountIsNot3 = state.SenCount != 3;
+                    bool senCountIs0AndHiganbanaCondition3 = state.SenCount == 0 && state.TargetHiganbanaLeft < state.GCDTime * 6;
+                    bool senCountIs1AndHiganbanaCondition4 = state.SenCount == 1 && state.TargetHiganbanaLeft < state.GCDTime * 3;
+                    bool senCountIs1AndHiganbanaCondition5 = state.SenCount == 0 && state.TargetHiganbanaLeft < state.GCDTime * 3;
+
+                    if (ShouldUseYukikaze(state, strategy, aoe))
+                    {
+                        return AID.Yukikaze;
+                    }
+                    if (state.FugetsuLeft <= state.FukaLeft || !state.HasFugetsu)
+                    {
+                        if (state.Unlocked(AID.Jinpu))
+                            return AID.Jinpu;
+                    }
+                    if (state.FukaLeft <= state.FugetsuLeft || !state.HasFuka)
+                    {
+                        if (state.Unlocked(AID.Shifu))
+                            return AID.Shifu;
+                    }
+                }
+                if (state.ComboLastMove == AID.Jinpu)
+                    return AID.Gekko;
+                if (state.ComboLastMove == AID.Shifu)
+                    return AID.Kasha;
+            }
+            return AID.Hakaze;
+        }
+
+        public static bool RefreshDOT(State state, float timeLeft) => timeLeft < state.GCD;
+
+        public static bool ShouldUsePotion(State state, Strategy strategy) => strategy.PotionStrategy switch
+        {
+            Strategy.PotionUse.Manual => false,
+            Strategy.PotionUse.Opener => state.CD(CDGroup.TsubameGaeshi) < state.GCD + (state.GCDTime * 3) && strategy.CombatTimer > 0f,
+            Strategy.PotionUse.Force => true,
+            _ => false
+        };
+
+        public static (Positional, bool) GetNextPositional(State state, Strategy strategy, bool aoe)
+        {
+            if (strategy.UseAOERotation)
+                return default;
+
+            if (!strategy.UseAOERotation)
+            {
+                if (GetNextBestGCD(state, strategy, aoe) == AID.Kasha)
+                    return (Positional.Flank, true);
+                if (GetNextBestGCD(state, strategy, aoe) == AID.Gekko)
+                    return (Positional.Rear, true);
+
+                return default;
+            }
+            else
+            {
+                return default;
+            }
+        }
+
+        public static bool ShouldUseTrueNorth(State state, Strategy strategy, bool aoe)
+        {
+            switch (strategy.TrueNorthStrategy)
+            {
+                case Strategy.TrueNorthUse.Delay:
+                    return false;
+
+                default:
+                    if (!state.TargetingEnemy)
+                        return false;
+                    if (state.TrueNorthLeft > state.AnimationLock)
+                        return false;
+                    if (GetNextPositional(state, strategy, aoe).Item2 && strategy.NextPositionalCorrect)
+                        return false;
+                    if (GetNextPositional(state, strategy, aoe).Item2 && !strategy.NextPositionalCorrect)
+                        return true;
+                    return false;
+            }
+        }
+
+        public static bool ShouldUseOgiNamikiri(State state, Strategy strategy, bool aoe)
+        {
+            if (strategy.OgiNamikiriStrategy == Strategy.OgiUse.Delay)
+                return false;
+            if (strategy.OgiNamikiriStrategy == Strategy.OgiUse.Force)
+                return true;
+            if (state.HasFugetsu && state.HasFuka && !aoe && state.OgiNamikiriReady > state.AnimationLock && state.CD(CDGroup.TsubameGaeshi) > 10 && strategy.HiganbanaStrategy == Strategy.HiganbanaUse.Delay && !state.HasMeikyoShisui)
+                return true;
+            if (state.HasFugetsu && state.HasFuka && !aoe && state.OgiNamikiriReady > state.AnimationLock && state.TargetHiganbanaLeft >= 5 && state.CD(CDGroup.TsubameGaeshi) > 10 && !state.HasMeikyoShisui)
+                return true;
+            if (state.HasFugetsu && state.HasFuka && !aoe && state.OgiNamikiriReady > state.AnimationLock && state.CD(CDGroup.TsubameGaeshi) > 10 && strategy.HiganbanaStrategy == Strategy.HiganbanaUse.Delay && state.HasMeikyoShisui && state.MeikyoShisuiLeft > state.GCDTime * 2 + 1)
+                return true;
+            if (state.HasFugetsu && state.HasFuka && !aoe && state.OgiNamikiriReady > state.AnimationLock && state.TargetHiganbanaLeft >= 5 && state.CD(CDGroup.TsubameGaeshi) > 10 && state.HasMeikyoShisui && state.MeikyoShisuiLeft > state.GCDTime * 2 + 1)
+                return true;
+            if (state.HasFugetsu && state.HasFuka && !aoe && state.OgiNamikiriReady > state.AnimationLock && !ShouldUseHiganbana(state, strategy, aoe) && state.CD(CDGroup.TsubameGaeshi) > 10 && state.HasMeikyoShisui && state.MeikyoShisuiLeft > state.GCDTime * 2 + 1)
+                return true;
+            if (state.HasFugetsu && state.HasFuka && aoe && state.OgiNamikiriReady > state.AnimationLock && ((state.CD(CDGroup.TsubameGaeshi) > 10 && !state.HasMeikyoShisui) || state.OgiNamikiriReady < state.GCDTime * 5))
+                return true;
+            if (state.HasFugetsu && state.HasFuka && aoe && state.OgiNamikiriReady > state.AnimationLock && ((state.CD(CDGroup.TsubameGaeshi) > 10 && state.HasMeikyoShisui && state.MeikyoShisuiLeft > state.GCDTime * 2 + 1) || state.OgiNamikiriReady < state.GCDTime * 5))
+                return true;
+            return false;
+        }
+
+        public static bool ShouldUseTsubameGaeshi(State state, Strategy strategy, bool aoe)
+        {
+            if (strategy.TsubameGaeshiStrategy == Strategy.TsubameUse.Delay)
+                return false;
+            if (strategy.TsubameGaeshiStrategy == Strategy.TsubameUse.Force)
+                return true;
+            if (state.Gauge.Kaeshi == Kaeshi.NAMIKIRI)
+                return true;
+            if (state.HasFugetsu && state.HasFuka && !aoe && state.Gauge.Kaeshi == Kaeshi.SETSUGEKKA && state.CD(CDGroup.TsubameGaeshi) - 60 <= state.GCD && (state.CD(CDGroup.Ikishoten) > 65 || state.CD(CDGroup.TsubameGaeshi) < state.GCDTime * 2))
+                return true;
+            if (state.HasFugetsu && state.HasFuka && !aoe && state.Gauge.Kaeshi == Kaeshi.SETSUGEKKA && state.CD(CDGroup.TsubameGaeshi) - 60 <= state.GCD && state.TTK < 20 && strategy.TsubameGaeshiStrategy != Strategy.TsubameUse.IgnoreTTK && !Service.Config.Get<SAMConfig>().TTKignore)
+                return true;
+            if (state.HasFugetsu && state.HasFuka && !aoe && state.Gauge.Kaeshi == Kaeshi.SETSUGEKKA && state.CD(CDGroup.TsubameGaeshi) <= state.GCD && state.CD(CDGroup.Ikishoten) < 65 && state.CD(CDGroup.Ikishoten) > 50 && Service.Config.Get<SAMConfig>().Filler)
+                return true;
+            if (state.HasFugetsu && state.HasFuka && !aoe && state.Gauge.Kaeshi == Kaeshi.SETSUGEKKA && state.CD(CDGroup.TsubameGaeshi) - 60 <= state.GCD && state.CD(CDGroup.Ikishoten) < 65 && state.CD(CDGroup.Ikishoten) > 35 && strategy.PotionStrategy != Strategy.PotionUse.Opener && !(state.TargetHiganbanaLeft < state.GCDTime * 2) && !Service.Config.Get<SAMConfig>().Filler)
+                return true;
+            if (state.HasFugetsu && state.HasFuka && aoe && state.Gauge.Kaeshi == Kaeshi.GOKEN && state.CD(CDGroup.TsubameGaeshi) - 60 <= state.GCD && (state.CD(CDGroup.Ikishoten) > 65 || state.CD(CDGroup.Ikishoten) <= 0))
+                return true;
+            return false;
+        }
+
+        public static bool ShouldUseHiganbana(State state, Strategy strategy, bool aoe)
+        {
+            if (strategy.HiganbanaStrategy == Strategy.HiganbanaUse.Delay)
+                return false;
+            if (strategy.HiganbanaStrategy == Strategy.HiganbanaUse.Force)
+                return true;
+            if (!aoe)
+            {
+                if ((state.TargetHiganbanaLeft <= state.GCDTime * 2 || state.TargetHiganbanaLeft <= state.GCDTime * 2 && GetNextUnlockedComboAction(state, strategy, aoe) == AID.Yukikaze || state.TargetHiganbanaLeft <= state.GCDTime * 2 && GetNextUnlockedComboAction(state, strategy, aoe) == AID.Gekko || state.TargetHiganbanaLeft <= state.GCDTime * 2 && GetNextUnlockedComboAction(state, strategy, aoe) == AID.Kasha) && Service.Config.Get<SAMConfig>().TTKignoreHiganbanaOnly && Service.Config.Get<SAMConfig>().EarlyHiganbana)
+                    return true;
+                if ((state.TargetHiganbanaLeft <= state.GCDTime * 2 || state.TargetHiganbanaLeft <= state.GCDTime * 2 && GetNextUnlockedComboAction(state, strategy, aoe) == AID.Yukikaze || state.TargetHiganbanaLeft <= state.GCDTime * 2 && GetNextUnlockedComboAction(state, strategy, aoe) == AID.Gekko || state.TargetHiganbanaLeft <= state.GCDTime * 2 && GetNextUnlockedComboAction(state, strategy, aoe) == AID.Kasha) && state.TTK > 45 && !Service.Config.Get<SAMConfig>().TTKignoreHiganbanaOnly && Service.Config.Get<SAMConfig>().EarlyHiganbana)
+                    return true;
+                if ((state.TargetHiganbanaLeft <= state.GCDTime * 2 || state.TargetHiganbanaLeft <= state.GCDTime * 2 && GetNextUnlockedComboAction(state, strategy, aoe) == AID.Yukikaze || state.TargetHiganbanaLeft <= state.GCDTime * 2 && GetNextUnlockedComboAction(state, strategy, aoe) == AID.Gekko || state.TargetHiganbanaLeft <= state.GCDTime * 2 && GetNextUnlockedComboAction(state, strategy, aoe) == AID.Kasha) && state.HasFugetsu && state.HasFuka && state.CD(CDGroup.TsubameGaeshi) > 10 && state.TTK > 45 && strategy.HiganbanaStrategy != Strategy.HiganbanaUse.IgnoreTTK && !Service.Config.Get<SAMConfig>().TTKignoreHiganbanaOnly && !Service.Config.Get<SAMConfig>().EarlyHiganbana)
+                    return true;
+                if ((state.TargetHiganbanaLeft <= state.GCDTime * 2 || state.TargetHiganbanaLeft <= state.GCDTime * 2 && GetNextUnlockedComboAction(state, strategy, aoe) == AID.Yukikaze || state.TargetHiganbanaLeft <= state.GCDTime * 2 && GetNextUnlockedComboAction(state, strategy, aoe) == AID.Gekko || state.TargetHiganbanaLeft <= state.GCDTime * 2 && GetNextUnlockedComboAction(state, strategy, aoe) == AID.Kasha) && state.HasFugetsu && state.HasFuka && state.CD(CDGroup.TsubameGaeshi) > 10 && Service.Config.Get<SAMConfig>().TTKignoreHiganbanaOnly && !Service.Config.Get<SAMConfig>().EarlyHiganbana)
+                    return true;
+                if (state.HasFugetsu && state.HasFuka && strategy.HiganbanaStrategy != Strategy.HiganbanaUse.IgnoreTTK && !Service.Config.Get<SAMConfig>().TTKignoreHiganbanaOnly && state.TTK < 20 && state.CD(CDGroup.TsubameGaeshi) > 80 && state.OgiNamikiriReady < state.AnimationLock && state.Gauge.MeditationStacks == 2)
+                    return true;
+            }
+            return false;
+        }
+
+        public static bool ShouldUseSetsugekka(State state, Strategy strategy, bool aoe)
+        {
+            if (state.HasFugetsu && state.HasFuka && state.SenCount == 3
+                && ((state.CD(CDGroup.TsubameGaeshi) > state.GCDTime * 4 && !state.isMoving)
+                || (state.CD(CDGroup.Ikishoten) > 65 && state.CD(CDGroup.TsubameGaeshi) - 60 <= state.GCD)
+                || (state.CD(CDGroup.TsubameGaeshi) > state.GCDTime * 4 && state.TargetHiganbanaLeft <= state.GCDTime * 4)
+                || (state.CD(CDGroup.TsubameGaeshi) > state.GCDTime * 4 && state.isMoving && (GetNextUnlockedComboAction(state, strategy, aoe) == AID.Yukikaze || GetNextUnlockedComboAction(state, strategy, aoe) == AID.Gekko || GetNextUnlockedComboAction(state, strategy, aoe) == AID.Kasha || state.HasMeikyoShisui))))
+                return true;
+            if (state.HasFugetsu && state.HasFuka && state.CD(CDGroup.Ikishoten) < 15 && state.SenCount == 3 && state.CD(CDGroup.TsubameGaeshi) - 60 < state.GCDTime * 4 && ((state.ComboLastMove == AID.Jinpu || state.ComboLastMove == AID.Shifu) || state.CD(CDGroup.TsubameGaeshi) < state.GCDTime))
+                return true;
+            if (state.HasFugetsu && state.HasFuka && state.SenCount == 3 && state.CD(CDGroup.TsubameGaeshi) < state.GCDTime)
+                return true;
+            return false;
+        }
+
+        public static bool ShouldUseTenkaGoken(State state, Strategy strategy, bool aoe)
+        {
+            if (aoe)
+            {
+                if (state.HasFugetsu && state.HasFuka && state.SenCount == 2 && state.Unlocked(AID.TenkaGoken))
+                    return true;
+            }
+            return false;
+        }
+
+        public static bool ShouldUseMeikyoShisui(State state, Strategy strategy, bool aoe)
+        {
+            if (!aoe && state.Unlocked(AID.MeikyoShisui) && !state.HasMeikyoShisui && state.ComboTimeLeft == 0 && state.RangeToTarget < 5)
+            {
+                if (state.TargetHiganbanaLeft <= state.GCDTime * 2 && state.SenCount == 0 && ShouldUseHiganbana(state, strategy, aoe))
+                    return true;
+
+                if (state.TargetHiganbanaLeft <= state.GCDTime * 5 && state.SenCount == 1 && ShouldUseHiganbana(state, strategy, aoe))
+                    return true;
+
+                if (state.TargetHiganbanaLeft <= state.GCDTime * 4 && state.SenCount == 2 && ShouldUseHiganbana(state, strategy, aoe))
+                    return true;
+
+                if (state.CD(CDGroup.MeikyoShisui) <= state.GCDTime && state.CD(CDGroup.TsubameGaeshi) > state.GCDTime * 4 && state.CD(CDGroup.Ikishoten) < 119.9f && state.CD(CDGroup.Ikishoten) > 100 && state.SenCount == 0 && Service.Config.Get<SAMConfig>().Filler)
+                    return true;
+
+                if (state.CD(CDGroup.MeikyoShisui) <= state.GCDTime && (state.SenCount == 0 || state.SenCount == 1) && !Service.Config.Get<SAMConfig>().Filler)
+                    return true;
+
+                if (state.CD(CDGroup.TsubameGaeshi) < state.GCDTime * (state.SenCount == 2 ? 2 : state.SenCount == 1 ? 3 : 4) && (state.SenCount == 1 || state.SenCount == 2) && state.SenCount != 3)
+                    return true;
+
+                if ((state.CD(CDGroup.TsubameGaeshi) < 60 - state.GCDTime * 4 && state.CD(CDGroup.TsubameGaeshi) > 0) && state.CD(CDGroup.Ikishoten) < 119.9f && state.CD(CDGroup.Ikishoten) > 100f && state.Gauge.HasSetsu)
+                    return true;
+
+                //if (state.CD(CDGroup.TsubameGaeshi) - 60 < state.GCD && state.CD(CDGroup.Ikishoten) > 95 && state.SenCount == 0 && !Service.Config.Get<SAMConfig>().Filler)
+                //return true;
+
+                if (state.TTK < 20 && !Service.Config.Get<SAMConfig>().TTKignore)
+                    return true;
+            }
+
+            if (aoe && state.Unlocked(AID.MeikyoShisui) && !state.HasMeikyoShisui && state.ComboTimeLeft == 0 && state.CD(CDGroup.TsubameGaeshi) > 55)
+                return true;
+
+            return false;
+        }
+
+
+        public static bool ShouldUseShintenOrKyuten(State state, Strategy strategy, bool aoe)
+        {
+            bool isUnlockedHissatsuSenei = state.Unlocked(AID.HissatsuSenei);
+            bool useKenkiToUseIkishoten = state.Gauge.Kenki > 50;
+            bool isIkishotenReady = state.CD(CDGroup.Ikishoten) < state.GCDTime * 1;
+            bool isHissatsuSeneiReady = state.CD(CDGroup.HissatsuSenei) < 100;
+            bool isKenkiGaugeFull = state.Gauge.Kenki + KenkiGaugeGainedFromAction(state, GetNextBestGCD(state, strategy, aoe)) > 90;
+            bool isKenki25OrMore = state.Gauge.Kenki >= 25;
+            bool isRaidBuffsLeft = state.RaidBuffsLeft > state.AnimationLock;
+            bool isHissatsuSeneiInRange = state.CD(CDGroup.HissatsuSenei) < 119.9f && state.CD(CDGroup.HissatsuSenei) > 20;
+            bool isTTKLessThan30 = state.TTK < 20;
+            bool isTTKIgnore = !Service.Config.Get<SAMConfig>().TTKignore;
+            bool hasFugetsu = state.HasFugetsu;
+
+            bool isUnlockedHissatsuGuren = state.Unlocked(AID.HissatsuGuren);
+            bool isHissatsuGurenReady = state.CD(CDGroup.HissatsuGuren) < 100;
+            bool isHissatsuGurenInRange = state.CD(CDGroup.HissatsuGuren) < 119.9f && state.CD(CDGroup.HissatsuGuren) > 20;
+
+            // Replace these conditions with your actual logic
+            bool shouldUseShinten = !aoe && isUnlockedHissatsuSenei &&
+                ((useKenkiToUseIkishoten && isIkishotenReady) ||
+                (isKenkiGaugeFull && isHissatsuSeneiReady) ||
+                (isKenki25OrMore && state.CD(CDGroup.HissatsuSenei) > 100) ||
+                (isKenki25OrMore && isRaidBuffsLeft && isHissatsuSeneiInRange) ||
+                (state.CD(CDGroup.HissatsuSenei) < state.TTK && useKenkiToUseIkishoten && isTTKLessThan30 && isTTKIgnore) ||
+                (state.CD(CDGroup.HissatsuSenei) > state.TTK && isKenki25OrMore && isTTKLessThan30 && isTTKIgnore)) &&
+                hasFugetsu;
+
+            bool shouldUseKyuten = aoe && isUnlockedHissatsuGuren &&
+                ((useKenkiToUseIkishoten && isIkishotenReady) ||
+                (isKenkiGaugeFull && isHissatsuGurenReady) ||
+                (isKenki25OrMore && state.CD(CDGroup.HissatsuSenei) > 100) ||
+                (isKenki25OrMore && isRaidBuffsLeft && isHissatsuGurenInRange) ||
+                (state.CD(CDGroup.HissatsuSenei) < state.TTK && useKenkiToUseIkishoten && isTTKLessThan30 && isTTKIgnore) ||
+                (state.CD(CDGroup.HissatsuSenei) > state.TTK && isKenki25OrMore && isTTKLessThan30 && isTTKIgnore)) &&
+                hasFugetsu;
+
+            return aoe ? shouldUseKyuten : shouldUseShinten;
+        }
+
+
+        public static AID GetNextBestGCD(State state, Strategy strategy, bool aoe)
+        {
+            bool meikyobuff = state.MeikyoShisuiLeft > state.AnimationLock;
+            bool Fugetsubuff = state.FugetsuLeft > state.AnimationLock;
+            bool Fukabuff = state.FukaLeft > state.AnimationLock;
             if (strategy.CombatTimer > -100 && strategy.CombatTimer < -0.7f)
                 return AID.None;
 
-            var canCast = CanCast(state, strategy);
+            if (state.Gauge.Kaeshi == Kaeshi.NAMIKIRI)
+                return state.BestTsubame;
 
-            // fallback 1: out of range for ogi
-            if (CanEnpi(state, strategy) && state.RangeToTarget > 8)
-                return AID.Enpi;
-
-            var k = ImminentKaeshi(state);
-            if (k != AID.None)
-                return k;
-
-            if (
-                state.OgiNamikiriLeft > 0
-                && state.HasCombatBuffs
-                && canCast
-                && !ShouldRefreshHiganbana(state, strategy)
-                && state.SenCount == 0
-            )
+            if (ShouldUseOgiNamikiri(state, strategy, aoe))
                 return AID.OgiNamikiri;
-
-            // fallback 2: out of range for iaijutsu
-            if (CanEnpi(state, strategy) && state.RangeToTarget > 6)
-                return AID.Enpi;
-
-            if (state.SenCount == 3 && canCast)
-                return AID.MidareSetsugekka;
-
-            if (state.HasCombatBuffs && canCast)
+            if (ShouldUseTsubameGaeshi(state, strategy, aoe))
+                return state.BestTsubame;
+            if (ShouldUseSetsugekka(state, strategy, aoe) && state.SenCount == 3)
+                return state.BestIaijutsu;
+            if (ShouldUseHiganbana(state, strategy, aoe) && state.SenCount == 1)
             {
-                if (
-                    state.SenCount == 1
-                    && state.Unlocked(AID.Higanbana)
-                    && ShouldRefreshHiganbana(state, strategy)
-                )
-                    return AID.Higanbana;
-
-                if (
-                    strategy.UseAOERotation
-                    && state.SenCount == 2
-                    && state.Unlocked(AID.TenkaGoken)
-                )
-                    return AID.TenkaGoken;
+                if (state.SenCount == 1 && state.TargetHiganbanaLeft < state.GCDTime * 1 && (GetNextUnlockedComboAction(state, strategy, aoe) != AID.Gekko || GetNextUnlockedComboAction(state, strategy, aoe) != AID.Kasha || GetNextUnlockedComboAction(state, strategy, aoe) != AID.Yukikaze))
+                    return state.BestIaijutsu;
+                if (state.SenCount == 1 && !state.HasMeikyoShisui && state.TargetHiganbanaLeft < state.GCDTime * 2 && (GetNextUnlockedComboAction(state, strategy, aoe) != AID.Gekko || GetNextUnlockedComboAction(state, strategy, aoe) != AID.Kasha || GetNextUnlockedComboAction(state, strategy, aoe) != AID.Yukikaze))
+                    return GetNextUnlockedComboAction(state, strategy, aoe);
+                if (state.ComboTimeLeft > 0 && state.TargetHiganbanaLeft < state.GCDTime * 2 && (GetNextUnlockedComboAction(state, strategy, aoe) != AID.Gekko || GetNextUnlockedComboAction(state, strategy, aoe) != AID.Kasha || GetNextUnlockedComboAction(state, strategy, aoe) != AID.Yukikaze))
+                    return state.BestIaijutsu;
+                else return state.BestIaijutsu;
             }
+            if (ShouldUseTenkaGoken(state, strategy, aoe) && state.SenCount == 2)
+                return state.BestIaijutsu;
 
-            // fallback 3: out of range for weaponskills
-            if (CanEnpi(state, strategy) && state.RangeToTarget > 3)
-                return AID.Enpi;
-
-            if (state.MeikyoLeft > state.GCD)
-            {
-                if (strategy.UseAOERotation)
-                {
-                    if (!state.HasMoonSen)
-                        return AID.Mangetsu;
-                    if (!state.HasFlowerSen)
-                        return AID.Oka;
-                }
-                else
-                    return GetMeikyoPositional(state, strategy).Action;
-            }
-
-            if (state.ComboLastMove == AID.Jinpu && state.Unlocked(AID.Gekko))
-                return AID.Gekko;
-            if (state.ComboLastMove == AID.Shifu && state.Unlocked(AID.Kasha))
-                return AID.Kasha;
-
-            if (state.ComboLastMove == state.AOEStarter)
-            {
-                if (state.Unlocked(AID.Oka) && state.FukaLeft <= state.FugetsuLeft)
-                    return AID.Oka;
-                if (state.Unlocked(AID.Mangetsu) && state.FugetsuLeft <= state.FukaLeft)
-                    return AID.Mangetsu;
-            }
-
-            if (state.ComboLastMove == AID.Hakaze)
-            {
-                var aid = GetHakazeComboAction(state);
-                if (aid != AID.None)
-                    return aid;
-            }
-
-            return strategy.UseAOERotation ? state.AOEStarter : AID.Hakaze;
+            return GetNextUnlockedComboAction(state, strategy, aoe);
         }
 
-        // range checked at callsite
-        private static bool CanEnpi(State state, Strategy strategy)
+        public static ActionID GetNextBestOGCD(State state, Strategy strategy, float deadline, bool aoe)
         {
-            if (strategy.UseAOERotation)
-                return false;
+            bool raidbuffs = state.RaidBuffsLeft > state.GCD;
+            bool inOddMinute = state.CD(CDGroup.Ikishoten) < 60 && state.CD(CDGroup.Ikishoten) > 30;
 
-            return strategy.EnpiStrategy switch
-            {
-                EnpiUse.Automatic => state.Unlocked(AID.Enpi) && state.EnhancedEnpiLeft > state.GCD,
-                EnpiUse.Ranged => state.Unlocked(AID.Enpi),
-                EnpiUse.Never or _ => false,
-            };
-        }
-
-        private static (AID Action, bool Imminent) GetMeikyoPositional(
-            State state,
-            Strategy strategy
-        )
-        {
-            if (
-                !state.HasMoonSen && !state.HasFlowerSen
-                || (state.SenCount == 1 && ShouldRefreshHiganbana(state, strategy))
-            )
-            {
-                if (state.TrueNorthLeft > state.GCD)
-                    return (AID.Gekko, false);
-
-                return state.ClosestPositional switch
-                {
-                    Positional.Flank => (AID.Kasha, false),
-                    Positional.Rear => (AID.Gekko, false),
-                    _ => (AID.Kasha, true) // flank is closer
-                };
-                ;
-            }
-
-            if (!state.HasMoonSen)
-                return (AID.Gekko, true);
-            if (!state.HasFlowerSen)
-                return (AID.Kasha, true);
-            if (!state.HasIceSen)
-                return (AID.Yukikaze, true);
-
-            // full on sen but can't cast due to a cdplan fuckup, e.g. midare planned during a forced movement mechanic
-            // gotta do something
-            return (state.ClosestPositional == Positional.Rear ? AID.Gekko : AID.Kasha, false);
-        }
-
-        public static ActionID GetNextBestOGCD(State state, Strategy strategy, float deadline)
-        {
             if (strategy.CombatTimer > -100 && strategy.CombatTimer < -0.7f)
             {
-                if (strategy.CombatTimer > -9 && state.MeikyoLeft == 0)
+                if (strategy.CombatTimer > -9 && !state.HasMeikyoShisui)
                     return ActionID.MakeSpell(AID.MeikyoShisui);
-                if (
-                    strategy.CombatTimer > -5
-                    && state.TrueNorthLeft == 0
-                    && strategy.TrueNorthUse != OffensiveAbilityUse.Delay
-                )
+                if (strategy.CombatTimer > -5 && state.TrueNorthLeft == 0 && ShouldUseTrueNorth(state, strategy, aoe))
                     return ActionID.MakeSpell(AID.TrueNorth);
-
-                return new();
             }
+            if (ShouldUsePotion(state, strategy) && state.CanWeave(state.PotionCD, 1.1f, deadline))
+                return CommonDefinitions.IDPotionStr;
 
-            if (state.MeikyoLeft == 0 && state.CanWeave(state.NextMeikyoCharge, 0.6f, deadline))
+            if (Service.Config.Get<SAMConfig>().Filler && !aoe)
             {
-                if (strategy.MeikyoStrategy == MeikyoUse.Force && !state.InCombo)
-                    return ActionID.MakeSpell(AID.MeikyoShisui);
-                if (strategy.MeikyoStrategy == MeikyoUse.ForceBreakCombo)
-                    return ActionID.MakeSpell(AID.MeikyoShisui);
+                if (state.CanWeave(CDGroup.Hagakure, 0.6f, deadline) && state.CD(CDGroup.Ikishoten) < 60 && state.SenCount > 0 && !state.HasMeikyoShisui && Fillerdone == false && state.TTK > 45 && !Service.Config.Get<SAMConfig>().TTKignore && state.CD(CDGroup.TsubameGaeshi) < state.GCDTime * 10 && state.CD(CDGroup.TsubameGaeshi) > state.GCDTime * 8)
+                    return ActionID.MakeSpell(AID.Hagakure);
+                if (state.CanWeave(CDGroup.Hagakure, 0.6f, deadline) && state.CD(CDGroup.Ikishoten) < 60 && state.SenCount > 0 && !state.HasMeikyoShisui && Fillerdone == false && Service.Config.Get<SAMConfig>().TTKignore && state.CD(CDGroup.TsubameGaeshi) < state.GCDTime * 10 && state.CD(CDGroup.TsubameGaeshi) > state.GCDTime * 8)
+                    return ActionID.MakeSpell(AID.Hagakure);
+                if (state.lastActionisHagakure)
+                    Fillerdone = true;
+                if (state.CD(CDGroup.Ikishoten) > 65)
+                    Fillerdone = false;
             }
 
-            if (
-                ShouldUseTrueNorth(state, strategy)
-                && state.CanWeave(state.CD(CDGroup.TrueNorth) - 45, 0.6f, deadline)
-                && state.GCD < 0.800
-            )
+            if (state.TargetHiganbanaLeft <= state.GCDTime * 3 && state.SenCount > 1 && state.SenCount != 3 && !state.HasMeikyoShisui && (GetNextBestGCD(state, strategy, aoe) != AID.Gekko || GetNextBestGCD(state, strategy, aoe) != AID.Kasha || GetNextBestGCD(state, strategy, aoe) != AID.Yukikaze) && state.CanWeave(CDGroup.Hagakure, 0.6f, deadline) && ShouldUseHiganbana(state, strategy, aoe) && !aoe)
+                return ActionID.MakeSpell(AID.Hagakure);
+            if (ShouldUseTrueNorth(state, strategy, aoe) && state.CanWeave(CDGroup.TrueNorth - 45, 0.6f, deadline) && !aoe && state.GCD < 0.7 && strategy.CombatTimer > -0.7f)
                 return ActionID.MakeSpell(AID.TrueNorth);
-
-            if (!state.TargetingEnemy)
-                return default;
-
-            if (state.MeikyoLeft == 0 && state.LastTsubame < state.GCDTime * 3)
+            if (!aoe && state.Unlocked(AID.HissatsuSenei) && state.CanWeave(CDGroup.HissatsuSenei, 0.6f, deadline) && state.Gauge.Kenki >= 25 && state.HasFugetsu && state.HasFuka
+                && ((state.Gauge.Kaeshi == Kaeshi.SETSUGEKKA || (state.CD(CDGroup.TsubameGaeshi) < 60 && state.CD(CDGroup.TsubameGaeshi) > 40))
+                && (state.CD(CDGroup.Ikishoten) <= state.AnimationLock || state.CD(CDGroup.Ikishoten) > 89 || state.CD(CDGroup.Ikishoten) < 10)
+                || state.TTK < 20 && !Service.Config.Get<SAMConfig>().TTKignore))
+                return ActionID.MakeSpell(AID.HissatsuSenei);
+            if (aoe && state.Unlocked(AID.HissatsuGuren) && state.CanWeave(CDGroup.HissatsuGuren, 0.6f, deadline) && state.Gauge.Kenki >= 25 && state.HasFugetsu && state.HasFuka
+                && (state.Gauge.Kaeshi == Kaeshi.GOKEN || (state.CD(CDGroup.TsubameGaeshi) < 60 && state.CD(CDGroup.TsubameGaeshi) > 40)) && (state.CD(CDGroup.Ikishoten) <= state.AnimationLock || state.CD(CDGroup.Ikishoten) > 89 || state.CD(CDGroup.Ikishoten) < 10))
+                return ActionID.MakeSpell(AID.HissatsuGuren);
+            if (ShouldUseMeikyoShisui(state, strategy, aoe) && state.CanWeave(state.CD(CDGroup.MeikyoShisui) - 55, 0.6f, deadline))
                 return ActionID.MakeSpell(AID.MeikyoShisui);
-
-            if (state.RangeToTarget > 3 && strategy.DashStrategy == DashUse.UseOutsideMelee)
+            if (!aoe && state.Gauge.MeditationStacks == 3 && state.CanWeave(CDGroup.Shoha, 0.6f, deadline) && state.HasFugetsu && state.HasFuka && (raidbuffs || GetNextBestGCD(state, strategy, aoe) == state.BestIaijutsu || GetNextBestGCD(state, strategy, aoe) == AID.OgiNamikiri || state.TTK < 20 && !Service.Config.Get<SAMConfig>().TTKignore))
+                return ActionID.MakeSpell(AID.Shoha);
+            if (aoe && state.Gauge.MeditationStacks == 3 && state.CanWeave(CDGroup.ShohaII, 0.6f, deadline) && state.HasFugetsu && state.HasFuka && (raidbuffs || GetNextBestGCD(state, strategy, aoe) == state.BestIaijutsu || GetNextBestGCD(state, strategy, aoe) == AID.OgiNamikiri || state.TTK < 20 && !Service.Config.Get<SAMConfig>().TTKignore))
+                return ActionID.MakeSpell(AID.ShohaII);
+            if (state.Unlocked(AID.Ikishoten) && state.CanWeave(CDGroup.Ikishoten, 0.6f, deadline) && state.Gauge.Kenki <= 50 && state.HasFugetsu && state.HasFuka
+                && ((state.CD(CDGroup.HissatsuSenei) < state.GCDTime && state.Gauge.Kenki < 25)
+                || state.CD(CDGroup.TsubameGaeshi) > 10
+                || (state.TTK < 20 && !Service.Config.Get<SAMConfig>().TTKignore)))
+                return ActionID.MakeSpell(AID.Ikishoten);
+            if (ShouldUseShintenOrKyuten(state, strategy, aoe) && state.CanWeave(CDGroup.HissatsuShinten, 0.6f, deadline))
+                return aoe ? ActionID.MakeSpell(AID.HissatsuKyuten) : ActionID.MakeSpell(AID.HissatsuShinten);
+            if ((state.Unlocked(AID.HissatsuGyoten) && state.CanWeave(CDGroup.HissatsuGyoten, 0.6f, deadline) && state.Gauge.Kenki == 10 && state.CD(CDGroup.Ikishoten) > 91 && state.RangeToTarget < 3 && state.OgiNamikiriReady <= state.AnimationLock && strategy.CombatTimer < 30) || (state.Unlocked(AID.HissatsuGyoten) && state.CanWeave(CDGroup.HissatsuGyoten, 0.6f, deadline) && state.Gauge.Kenki == 10 && state.CD(CDGroup.Ikishoten) > 97 && state.RangeToTarget < 3 && state.OgiNamikiriReady <= state.AnimationLock))
                 return ActionID.MakeSpell(AID.HissatsuGyoten);
 
-            if (
-                state.SenCount == 1
-                && state.HasIceSen
-                && !state.InCombo
-                // cooldown alignment. TODO: adapt for 2.07 SkS, which needs 3 filler GCDs - will have to update GetNextBestGCD also
-                && state.NextTsubameCharge > state.GCD + state.GCDTime * 7
-                && state.NextTsubameCharge <= state.GCD + state.GCDTime * 9
-                && state.CanWeave(CDGroup.Hagakure, 0.6f, deadline)
-            )
-                return ActionID.MakeSpell(AID.Hagakure);
-
-            if (state.HasCombatBuffs)
-            {
-                if (state.CanWeave(CDGroup.Ikishoten, 0.6f, deadline))
-                    return ActionID.MakeSpell(AID.Ikishoten);
-
-                if (
-                    CanUseKenki(state, strategy)
-                    && state.SenCount == 0
-                    && state.Unlocked(AID.HissatsuGuren)
-                    && state.CanWeave(CDGroup.HissatsuGuren, 0.6f, deadline)
-                )
-                {
-                    if (strategy.UseAOERotation || !state.Unlocked(AID.HissatsuSenei))
-                        return ActionID.MakeSpell(AID.HissatsuGuren);
-
-                    return ActionID.MakeSpell(AID.HissatsuSenei);
-                }
-
-                if (
-                    CanUseKenki(state, strategy, 10)
-                    && state.RaidBuffsLeft > 0
-                    && state.CanWeave(CDGroup.HissatsuGyoten, 0.6f, deadline)
-                    && (state.CD(CDGroup.HissatsuGuren) > state.GCDTime || state.Kenki >= 35)
-                    && state.RangeToTarget <= 3
-                    && strategy.DashStrategy != DashUse.Never
-                )
-                    return ActionID.MakeSpell(AID.HissatsuGyoten);
-            }
-
-            if (
-                CanUseKenki(state, strategy)
-                && state.CanWeave(CDGroup.HissatsuShinten, 0.6f, deadline)
-                && (state.CD(CDGroup.HissatsuGuren) > state.GCDTime || state.Kenki >= 50)
-            )
-                return ActionID.MakeSpell(AID.HissatsuShinten);
-
-            if (state.MeditationStacks == 3 && state.CanWeave(deadline))
-                return ActionID.MakeSpell(AID.Shoha);
-
             return new();
-        }
-
-        private static bool ShouldUseTrueNorth(State state, Strategy strategy)
-        {
-            if (state.TrueNorthLeft > state.AnimationLock)
-                return false;
-            if (strategy.TrueNorthUse == OffensiveAbilityUse.Force)
-                return true;
-            if (!state.TargetingEnemy || strategy.TrueNorthUse == OffensiveAbilityUse.Delay)
-                return false;
-
-            return strategy.NextPositionalImminent && !strategy.NextPositionalCorrect;
-        }
-
-        private static bool ShouldUseBurst(State state, Strategy strategy, float deadline)
-        {
-            return state.RaidBuffsLeft > deadline
-                // fight will end before next window, use everything
-                || strategy.RaidBuffsIn > strategy.FightEndIn
-                // general combat, no module active. yolo
-                || strategy.RaidBuffsIn > 9000;
-        }
-
-        private static bool ShouldRefreshHiganbana(
-            State state,
-            Strategy strategy,
-            uint gcdsInAdvance = 0
-        )
-        {
-            if (strategy.HiganbanaStrategy == HiganbanaUse.Never || !state.HasCombatBuffs)
-                return false;
-
-            // force use to get shoha even if the target is dying, dot overwrite doesn't matter
-            if (
-                strategy.HiganbanaStrategy != HiganbanaUse.Eager
-                && strategy.FightEndIn > 0
-                && (strategy.FightEndIn - state.GCD) < 45
-            )
-                return state.MeditationStacks == 2;
-
-            return state.TargetHiganbanaLeft < (5 + state.GCD + state.GCDTime * gcdsInAdvance);
-        }
-
-        private static bool CanUseKenki(State state, Strategy strategy, int minCost = 25)
-        {
-            return strategy.KenkiStrategy switch
-            {
-                KenkiUse.Automatic
-                    => state.Kenki >= 90
-                        || (
-                            state.Kenki >= minCost
-                            && ShouldUseBurst(state, strategy, state.AnimationLock)
-                        ),
-                KenkiUse.Force => state.Kenki >= minCost,
-                KenkiUse.ForceDash => state.Kenki - 10 >= minCost,
-                KenkiUse.Never or _ => false,
-            };
-        }
-
-        private static AID GetHakazeComboAction(State state)
-        {
-            // refresh buffs if they are about to expire
-            if (state.Unlocked(AID.Jinpu) && state.FugetsuLeft < state.GCDTime * 2)
-                return AID.Jinpu;
-            if (state.Unlocked(AID.Shifu) && state.FukaLeft < state.GCDTime * 2)
-                return AID.Shifu;
-
-            // lvl 50+, all sen combos are guaranteed to be unlocked here
-            if (
-                state.Unlocked(AID.Yukikaze)
-                && !state.HasIceSen
-                &&
-                // if we have one sen, and higanbana will drop below 15 after next weaponskill,
-                // use non-ice combo: it gives us one extra GCD to let higanbana tick
-                (
-                    state.SenCount != 1
-                    || state.TargetHiganbanaLeft >= state.GCDTime + state.GCD + 15
-                )
-            )
-            {
-                return AID.Yukikaze;
-            }
-
-            // if not using ice, refresh the buff that runs out first
-            if (
-                state.Unlocked(AID.Shifu)
-                && !state.HasFlowerSen
-                && state.FugetsuLeft >= state.FukaLeft
-            )
-                return AID.Shifu;
-
-            if (state.Unlocked(AID.Jinpu) && !state.HasMoonSen)
-                return AID.Jinpu;
-
-            return AID.None;
-        }
-
-        public static (Positional, bool) GetNextPositional(State state, Strategy strategy)
-        {
-            if (strategy.UseAOERotation)
-                return default;
-
-            if (state.MeikyoLeft > state.GCD)
-                return GetMeikyoPositional(state, strategy) switch
-                {
-                    (AID.Gekko, var imminent) => (Positional.Rear, imminent),
-                    (AID.Kasha, var imminent) => (Positional.Flank, imminent),
-                    _ => default
-                };
-
-            if (state.ComboLastMove == AID.Jinpu && state.Unlocked(AID.Gekko))
-                return (Positional.Rear, true);
-
-            if (state.ComboLastMove == AID.Shifu && state.Unlocked(AID.Kasha))
-                return (Positional.Flank, true);
-
-            if (state.ComboLastMove == AID.Hakaze)
-            {
-                var predicted = GetHakazeComboAction(state);
-                // TODO: DRY
-                if (predicted == AID.Jinpu && state.Unlocked(AID.Gekko))
-                    return (Positional.Rear, false);
-
-                if (predicted == AID.Shifu && state.Unlocked(AID.Kasha))
-                    return (Positional.Flank, false);
-            }
-
-            return default;
         }
     }
 }

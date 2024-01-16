@@ -183,7 +183,14 @@ namespace BossMod
                 //1221 => true, // SCH chain stratagem - note that this is a debuff on enemy
                 1297 => true, // RDM embolden
                 1822 => true, // DNC technical finish
+                1825 => true,
                 1878 => true, // AST divination
+                1882 => true,
+                1883 => true,
+                1884 => true,
+                1885 => true,
+                1886 => true,
+                1887 => true,
                 2599 => true, // RPR arcane circle
                 2703 => true, // SMN searing light
                 2964 => true, // BRD radiant finale
@@ -459,6 +466,46 @@ namespace BossMod
             if (_playerCombatStart != default)
                 return (float)(Autorot.WorldState.CurrentTime - _playerCombatStart).TotalSeconds;
             return -Math.Max(0.001f, Autorot.WorldState.Client.CountdownRemaining ?? float.MaxValue);
+        }
+
+        private static DateTime combatStartTime;
+        private static ulong previousTargetId;
+        private static bool combatStartTimeCaptured;
+
+        protected float TimeToKill()
+        {
+            var tar = Autorot.PrimaryTarget;
+
+            if (Player.InCombat && tar != null)
+            {
+                if (!combatStartTimeCaptured || previousTargetId != tar.TargetID)
+                {
+                    combatStartTime = Autorot.WorldState.CurrentTime;  // Capture the initial time when entering combat or switching targets
+                    previousTargetId = tar.TargetID;  // Update previousTargetID with the current target's ID
+                    combatStartTimeCaptured = true;
+                }
+
+                float tarMaxHP = tar.HP.Max;
+                float tarCurHP = tar.HP.Cur;
+
+                TimeSpan elapsed = DateTime.Now - combatStartTime;
+                float timeElapsed = (float)elapsed.TotalSeconds;
+                float timeToKill = tarCurHP / ((tarMaxHP - tarCurHP) / timeElapsed);
+
+                // Ensure timeToKill is positive
+                return timeToKill > 0 ? timeToKill : float.PositiveInfinity;
+            }
+            else if (tar == null)
+            {
+                // Do not reset combatStartTimeCaptured and previousTargetId when tar is null
+            }
+            else
+            {
+                combatStartTimeCaptured = false;  // Reset combatStartTimeCaptured when not in combat
+            }
+
+            // Default return value when conditions are not met
+            return float.PositiveInfinity;
         }
     }
 }

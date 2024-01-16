@@ -52,7 +52,6 @@ namespace BossMod.GNB
         DoubleDown = 25760, // L90, instant, 60.0s CD (group 12), range 0, AOE circle 5/0, targets=self, animLock=???
 
         // special
-        GunmetalSoul = 17105, // LB3
     }
 
     public enum TraitID : uint
@@ -101,7 +100,6 @@ namespace BossMod.GNB
         Rampart = 46, // 90.0 max
         ArmsLength = 48, // 120.0 max
         Shirk = 49, // 120.0 max
-        LimitBreak = 71, // special/fake (TODO: remove need for it?)
     }
 
     public enum SID : uint
@@ -243,7 +241,6 @@ namespace BossMod.GNB
             SupportedActions.OGCD(AID.HeartOfCorundum, 30, CDGroup.HeartOfCorundum, 25.0f).EffectDuration = 4;
             SupportedActions.OGCD(AID.Hypervelocity, 5, CDGroup.Hypervelocity, 1.0f);
             SupportedActions.OGCD(AID.DoubleDown, 0, CDGroup.DoubleDown, 60.0f);
-            SupportedActions.OGCD(AID.GunmetalSoul, 0, CDGroup.LimitBreak, 0, 3.86f);
         }
     }
 }
