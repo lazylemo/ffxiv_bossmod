@@ -480,7 +480,7 @@ namespace BossMod
             {
                 if (!combatStartTimeCaptured || previousTargetId != tar.TargetID)
                 {
-                    combatStartTime = Autorot.WorldState.CurrentTime;  // Capture the initial time when entering combat or switching targets
+                    combatStartTime = DateTime.Now;  // Capture the initial time when entering combat or switching targets
                     previousTargetId = tar.TargetID;  // Update previousTargetID with the current target's ID
                     combatStartTimeCaptured = true;
                 }

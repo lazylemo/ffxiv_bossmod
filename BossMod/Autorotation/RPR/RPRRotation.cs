@@ -490,13 +490,13 @@ namespace BossMod.RPR
                 default:
                     if (!state.TargetingEnemy)
                         return false;
-                    if (state.SoulGauge <= 50 && state.CD(CDGroup.SoulSlice) - 30 < state.GCD && (state.ComboTimeLeft > 5 || state.ComboTimeLeft == 0 || (state.ArcaneCircleLeft > state.AnimationLock && state.ComboTimeLeft > 12)) && state.CD(CDGroup.ArcaneCircle) > 11.5f)
+                    if (state.SoulGauge <= 50 && state.CD(CDGroup.SoulSlice) - 30 < state.GCD && (state.ComboTimeLeft > 5 || state.ComboTimeLeft == 0 || (state.ArcaneCircleLeft > state.AnimationLock && state.ComboTimeLeft > 13)) && state.CD(CDGroup.ArcaneCircle) > 11.5f)
                         return true;
                     if (state.HasEnshroud)
                         return false;
                     if (state.HasSoulReaver)
                         return false;
-                    if (state.ArcaneCircleLeft > state.AnimationLock && state.ComboTimeLeft < 11)
+                    if (state.ArcaneCircleLeft > state.AnimationLock && state.ComboTimeLeft < 13)
                         return false;
                     return false;
             }
