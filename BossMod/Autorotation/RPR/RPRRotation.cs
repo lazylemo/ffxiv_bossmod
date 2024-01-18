@@ -618,7 +618,7 @@ namespace BossMod.RPR
         {
             if (strategy.PotionStrategy == Strategy.PotionUse.Special && state.HasSoulsow && (state.CD(CDGroup.ArcaneCircle) < 11.5f || state.CD(CDGroup.ArcaneCircle) > 115))
             {
-                if (state.CD(CDGroup.ArcaneCircle) < 7.5f && state.ShroudGauge >= 50 && state.CanWeave(CDGroup.Enshroud, 0.6f, deadline) && (state.ComboTimeLeft < 27.5))
+                if (state.CD(CDGroup.ArcaneCircle) < 7.5f && state.ShroudGauge >= 50 && state.CanWeave(CDGroup.Enshroud, 0.6f, deadline) && (state.ComboTimeLeft < 27.5) && strategy.EnshroudStrategy != Strategy.EnshroudUse.Delay)
                     return ActionID.MakeSpell(AID.Enshroud);
                 if (state.LemureShroudCount == 3 && state.CanWeave(state.PotionCD, 1.1f, deadline) && state.lastActionisSoD)
                     return CommonDefinitions.IDPotionStr;
