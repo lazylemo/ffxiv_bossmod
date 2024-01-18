@@ -139,7 +139,18 @@ namespace BossMod.SAM
             _state.FugetsuLeft = StatusDetails(Player, SID.Fugetsu, Player.InstanceID).Left;
             _state.FukaLeft = StatusDetails(Player, SID.Fuka, Player.InstanceID).Left;
             _state.OgiNamikiriReady = StatusDetails(Player, SID.OgiNamikiriReady, Player.InstanceID).Left;
-            _state.MeikyoShisuiLeft = StatusDetails(Player, SID.MeikyoShisui, Player.InstanceID).Left;
+            _state.MeikyoShisuiLeft = 0;
+            _state.MeikyoShisuiStacks = 0;
+            foreach (var status in Player.Statuses)
+            {
+                switch ((SID)status.ID)
+                {
+                    case SID.MeikyoShisui:
+                        _state.MeikyoShisuiLeft = StatusDuration(status.ExpireAt);
+                        _state.MeikyoShisuiStacks = status.Extra & 0xFF;
+                        break;
+                }
+            }
             _state.TrueNorthLeft = StatusDetails(Player, SID.TrueNorth, Player.InstanceID).Left;
             _state.ClosestPositional = GetClosestPositional();
 

@@ -490,13 +490,15 @@ namespace BossMod.RPR
                 default:
                     if (!state.TargetingEnemy)
                         return false;
-                    if (state.SoulGauge <= 50 && state.CD(CDGroup.SoulSlice) - 30 < state.GCD && (state.ComboTimeLeft > 5 || state.ComboTimeLeft == 0 || (state.ArcaneCircleLeft > state.AnimationLock && state.ComboTimeLeft > 13)) && state.CD(CDGroup.ArcaneCircle) > 11.5f)
+                    if (state.SoulGauge <= 50 && state.CD(CDGroup.SoulSlice) - 30 < state.GCD && state.ArcaneCircleLeft > state.AnimationLock && state.ComboTimeLeft > 13 && state.CD(CDGroup.ArcaneCircle) > 11.5f)
+                        return false;
+                    if (state.SoulGauge <= 50 && state.CD(CDGroup.SoulSlice) - 30 < state.GCD && (state.ComboTimeLeft > 5 || state.ComboTimeLeft == 0) && state.CD(CDGroup.ArcaneCircle) > 11.5f)
                         return true;
                     if (state.HasEnshroud)
                         return false;
                     if (state.HasSoulReaver)
                         return false;
-                    if (state.ArcaneCircleLeft > state.AnimationLock && state.ComboTimeLeft < 13)
+                    if (state.ArcaneCircleLeft > state.AnimationLock && state.ComboTimeLeft < 15.5)
                         return false;
                     return false;
             }
@@ -628,7 +630,7 @@ namespace BossMod.RPR
 
             if (ShouldUsePotion(state, strategy) && state.CanWeave(state.PotionCD, 1.1f, deadline))
                 return CommonDefinitions.IDPotionStr;
-            if (ShouldUseTrueNorth(state, strategy) && state.CanWeave(CDGroup.TrueNorth - 45, 0.6f, deadline) && !aoe && state.GCD < 0.7)
+            if (ShouldUseTrueNorth(state, strategy) && state.CanWeave(CDGroup.TrueNorth - 45, 0.6f, deadline) && !aoe && state.GCD < 0.8)
                 return ActionID.MakeSpell(AID.TrueNorth);
             if (ShouldUseEnshroud(state, strategy) && state.Unlocked(AID.Enshroud) && state.CanWeave(CDGroup.Enshroud, 0.6f, deadline))
                 return ActionID.MakeSpell(AID.Enshroud);

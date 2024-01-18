@@ -127,6 +127,7 @@ namespace BossMod
                     Class.RPR => typeof(RPR.Actions),
                     Class.GNB => typeof(GNB.Actions),
                     Class.SAM => typeof(SAM.Actions),
+                    Class.DRK => typeof(DRK.Actions),
                     _ => null
                 };
             }

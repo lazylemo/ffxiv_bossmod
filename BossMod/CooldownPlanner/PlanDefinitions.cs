@@ -66,6 +66,7 @@ namespace BossMod
             Classes[Class.RPR] = DefineRPR();
             Classes[Class.GNB] = DefineGNB();
             Classes[Class.SAM] = DefineSAM();
+            Classes[Class.DRK] = DefineDRK();
         }
 
         private static ClassData DefineWAR()
@@ -180,23 +181,6 @@ namespace BossMod
             return c;
         }
 
-        private static ClassData DefineSAM()
-        {
-            var c = new ClassData(typeof(SAM.AID), SAM.Definitions.SupportedActions);
-            c.CooldownTracks.Add(new("ThirdEye", ActionID.MakeSpell(SAM.AID.ThirdEye), 6));
-            c.CooldownTracks.Add(new("Feint", ActionID.MakeSpell(SAM.AID.Feint), 22));
-            c.CooldownTracks.Add(new("ArmsL", ActionID.MakeSpell(SAM.AID.ArmsLength), 32));
-            c.CooldownTracks.Add(new("Sprint", CommonDefinitions.IDSprint, 1));
-            c.StrategyTracks.Add(new("TrueN", typeof(CommonRotation.Strategy.OffensiveAbilityUse)));
-            c.StrategyTracks.Add(new("Cast", typeof(CommonRotation.Strategy.OffensiveAbilityUse)));
-            c.StrategyTracks.Add(new("Higanbana", typeof(SAM.Rotation.Strategy.HiganbanaUse)));
-            c.StrategyTracks.Add(new("Meikyo", typeof(SAM.Rotation.Strategy.MeikyoUse)));
-            c.StrategyTracks.Add(new("Dash", typeof(SAM.Rotation.Strategy.DashUse)));
-            c.StrategyTracks.Add(new("Enpi", typeof(SAM.Rotation.Strategy.EnpiUse)));
-            c.StrategyTracks.Add(new("Kenki", typeof(SAM.Rotation.Strategy.KenkiUse)));
-            return c;
-        }
-
         private static ClassData DefineGNB()
         {
             var c = new ClassData(typeof(GNB.AID), GNB.Definitions.SupportedActions);
@@ -238,6 +222,34 @@ namespace BossMod
             c.StrategyTracks.Add(new("TrN", typeof(SAM.Rotation.Strategy.TrueNorthUse)));
             c.StrategyTracks.Add(new("Potion", typeof(SAM.Rotation.Strategy.PotionUse), 270));
             c.StrategyTracks.Add(new("spec", typeof(SAM.Rotation.Strategy.SpecialAction)));
+            return c;
+        }
+
+        private static ClassData DefineDRK()
+        {
+            var c = new ClassData(typeof(DRK.AID), DRK.Definitions.SupportedActions);
+            c.CooldownTracks.Add(new("SWall", ActionID.MakeSpell(DRK.AID.ShadowWall), 38));
+            c.CooldownTracks.Add(new("Rampart", ActionID.MakeSpell(DRK.AID.Rampart), 8));
+            c.CooldownTracks.Add(new("DarkM", ActionID.MakeSpell(DRK.AID.DarkMind), 6));
+            c.CooldownTracks.Add(new("LivD", ActionID.MakeSpell(DRK.AID.LivingDead), 50));
+            c.CooldownTracks.Add(new("TBN", ActionID.MakeSpell(DRK.AID.TheBlackestNight), 70));
+            c.CooldownTracks.Add(new("OBL", ActionID.MakeSpell(DRK.AID.Oblation), 82));
+            c.CooldownTracks.Add(new("ArmsL", ActionID.MakeSpell(DRK.AID.ArmsLength), 32));
+            c.CooldownTracks.Add(new("Reprisal", ActionID.MakeSpell(DRK.AID.Reprisal), 22));
+            c.CooldownTracks.Add(new("DM", ActionID.MakeSpell(DRK.AID.DarkMissionary), 76));
+            c.CooldownTracks.Add(new("Taunt", ActionID.MakeSpell(DRK.AID.Provoke), 15));
+            c.CooldownTracks.Add(new("Shirk", ActionID.MakeSpell(DRK.AID.Shirk), 48));
+            c.CooldownTracks.Add(new("Sprint", CommonDefinitions.IDSprint, 1));
+            c.StrategyTracks.Add(new("Gauge", typeof(DRK.Rotation.Strategy.GaugeUse)));
+            c.StrategyTracks.Add(new("Potion", typeof(DRK.Rotation.Strategy.PotionUse), 270));
+            c.StrategyTracks.Add(new("Deli", typeof(DRK.Rotation.Strategy.OffensiveAbilityUse)));
+            c.StrategyTracks.Add(new("CAS", typeof(DRK.Rotation.Strategy.OffensiveAbilityUse)));
+            c.StrategyTracks.Add(new("SB", typeof(DRK.Rotation.Strategy.OffensiveAbilityUse)));
+            c.StrategyTracks.Add(new("SE", typeof(DRK.Rotation.Strategy.OffensiveAbilityUse)));
+            c.StrategyTracks.Add(new("LivS", typeof(DRK.Rotation.Strategy.OffensiveAbilityUse)));
+            c.StrategyTracks.Add(new("MP", typeof(DRK.Rotation.Strategy.OffensiveAbilityUse)));
+            c.StrategyTracks.Add(new("Plunge", typeof(DRK.Rotation.Strategy.PlungeUse)));
+            c.StrategyTracks.Add(new("Special", typeof(DRK.Rotation.Strategy.SpecialAction)));
             return c;
         }
     }
