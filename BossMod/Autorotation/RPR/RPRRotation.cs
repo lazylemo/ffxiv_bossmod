@@ -533,6 +533,8 @@ namespace BossMod.RPR
 
             if (strategy.PotionStrategy == Strategy.PotionUse.Special && state.HasSoulsow && (state.CD(CDGroup.ArcaneCircle) < 12 || state.CD(CDGroup.ArcaneCircle) > 115))
             {
+                if (state.LemureShroudCount == 2 && state.CD(CDGroup.ArcaneCircle) < 0.2)
+                    return AID.ArcaneCircle;
                 if (state.HasSoulReaver)
                     return GetNextBSAction(state, aoe);
                 if (state.CD(CDGroup.ArcaneCircle) < 12 && state.TargetDeathDesignLeft < 30 && !state.HasSoulReaver)
@@ -625,7 +627,7 @@ namespace BossMod.RPR
                     return ActionID.MakeSpell(AID.Enshroud);
                 if (state.LemureShroudCount == 3 && state.CanWeave(state.PotionCD, 1.1f, deadline) && state.lastActionisSoD)
                     return CommonDefinitions.IDPotionStr;
-                if (state.LemureShroudCount == 2 && state.CanWeave(CDGroup.ArcaneCircle, 0.6f, deadline))
+                if (state.LemureShroudCount == 2 && state.CanWeave(CDGroup.ArcaneCircle, 0, deadline))
                     return ActionID.MakeSpell(AID.ArcaneCircle);
                 if (state.CD(CDGroup.ArcaneCircle) > 11 && state.VoidShroudCount >= 2 && state.CanWeave(CDGroup.LemuresSlice, 0.6f, deadline))
                     return ActionID.MakeSpell(AID.LemuresSlice);
