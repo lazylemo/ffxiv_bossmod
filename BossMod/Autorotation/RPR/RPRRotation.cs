@@ -407,8 +407,11 @@ namespace BossMod.RPR
             if (strategy.ArcaneCircleStrategy == Strategy.OffensiveAbilityUse.Delay)
                 return false;
 
-            else if (strategy.ArcaneCircleStrategy == Strategy.OffensiveAbilityUse.Force)
+            if (strategy.ArcaneCircleStrategy == Strategy.OffensiveAbilityUse.Force)
                 return true;
+
+            if (strategy.PotionStrategy == Strategy.PotionUse.Special)
+                return false;
 
             else
             {
