@@ -23,6 +23,7 @@ namespace BossMod.RPR
             public bool HasSoulsow;
             public float TargetDeathDesignLeft;
             public float CircleofSacrificeLeft;
+            public float EnshroudedLeft;
             public bool lastActionisSoD;
             public float TTK;
             public float GCDTime;
@@ -43,7 +44,7 @@ namespace BossMod.RPR
 
             public override string ToString()
             {
-                return $"shg={ShroudGauge}, Bloodsown={BloodsownCircleLeft} sog={SoulGauge}, RB={RaidBuffsLeft:f1}, DD={TargetDeathDesignLeft:f1}, EGI={EnhancedGibbetLeft:f1}, EGA={EnhancedGallowsLeft:f1}, CircleofSac={CircleofSacrificeLeft} SoulSlice={CD(CDGroup.SoulSlice)}, Enshroud={CD(CDGroup.Enshroud)}, AC={ArcaneCircleLeft}, ACCD={CD(CDGroup.ArcaneCircle):f1}, PotCD={PotionCD:f1}, GCD={GCD:f3}, ALock={AnimationLock:f3}+{AnimationLockDelay:f3}, lvl={Level}/{UnlockProgress}, TTK={TTK}";
+                return $"shg={ShroudGauge}, Bloodsown={BloodsownCircleLeft} sog={SoulGauge}, RB={RaidBuffsLeft:f1}, DD={TargetDeathDesignLeft:f1}, EGI={EnhancedGibbetLeft:f1}, EGA={EnhancedGallowsLeft:f1}, CircleofSac={CircleofSacrificeLeft} SoulSlice={CD(CDGroup.SoulSlice)}, Enshroud={CD(CDGroup.Enshroud)}, AC={ArcaneCircleLeft}, ACCD={CD(CDGroup.ArcaneCircle):f1}, PotCD={PotionCD:f1}, GCD={GCD:f3}, ComboTime={ComboTimeLeft:f2} ALock={AnimationLock:f3}+{AnimationLockDelay:f3}, lvl={Level}/{UnlockProgress}, TTK={TTK}";
             }
         }
 
@@ -291,7 +292,7 @@ namespace BossMod.RPR
                     if (ShouldUseEnshroud(state, strategy) && state.CD(CDGroup.Enshroud) < state.GCD)
                         return false;
 
-                    if (state.SoulGauge >= 50 && state.CD(CDGroup.Gluttony) > 28 && !aoe && (state.ComboTimeLeft > 2.5 || state.ComboTimeLeft == 0) && state.ShroudGauge <= 90 && state.CD(CDGroup.ArcaneCircle) > 9)
+                    if (state.SoulGauge >= 50 && (state.CD(CDGroup.Gluttony) > 28 || ((state.CD(CDGroup.SoulSlice) - 30 < state.CD(CDGroup.Gluttony)) && state.CD(CDGroup.Gluttony) > state.AnimationLock)) && !aoe && (state.ComboTimeLeft > 2.5 || state.ComboTimeLeft == 0) && state.ShroudGauge <= 90 && state.CD(CDGroup.ArcaneCircle) > 6)
                         return true;
 
                     if (state.SoulGauge == 100 && state.CD(CDGroup.Gluttony) > state.AnimationLock && !aoe && (state.ComboTimeLeft > 2.5 || state.ComboTimeLeft == 0) && state.ShroudGauge <= 90 && state.ImmortalSacrificeLeft < state.AnimationLock)
@@ -300,7 +301,7 @@ namespace BossMod.RPR
                     if (state.SoulGauge >= 50 && !aoe && (state.ComboTimeLeft > 2.5 || state.ComboTimeLeft == 0) && state.ImmortalSacrificeLeft > state.AnimationLock && state.BloodsownCircleLeft > 4.8f && (state.CD(CDGroup.SoulSlice) > 30 || state.CD(CDGroup.SoulSlice) < 60) && state.ShroudGauge <= 40)
                         return true;
 
-                    if ((state.CD(CDGroup.ArcaneCircle) < 9 || state.CD(CDGroup.ArcaneCircle) > 60) && state.ShroudGauge >= 50 && (state.ComboTimeLeft > 12 || state.ComboTimeLeft == 0))
+                    if ((state.CD(CDGroup.ArcaneCircle) < 6 || state.CD(CDGroup.ArcaneCircle) > 60) && state.ShroudGauge >= 50 && (state.ComboTimeLeft > 12 || state.ComboTimeLeft == 0))
                         return false;
                     return false;
             }
@@ -493,15 +494,15 @@ namespace BossMod.RPR
                 default:
                     if (!state.TargetingEnemy)
                         return false;
-                    if (state.SoulGauge <= 50 && state.CD(CDGroup.SoulSlice) - 30 < state.GCD && state.ArcaneCircleLeft > state.AnimationLock && state.ComboTimeLeft > 13 && state.CD(CDGroup.ArcaneCircle) > 11.5f)
+                    if (state.ArcaneCircleLeft > state.AnimationLock && (state.ComboTimeLeft < 13 && state.ComboTimeLeft > state.AnimationLock) && state.ShroudGauge >= 50)
+                        return false;
+                    if (state.SoulGauge <= 50 && state.CD(CDGroup.SoulSlice) - 30 < state.GCD && state.ArcaneCircleLeft > state.AnimationLock && (state.ComboTimeLeft < 13 && state.ComboTimeLeft > state.AnimationLock) && state.CD(CDGroup.ArcaneCircle) > 11.5f)
                         return false;
                     if (state.SoulGauge <= 50 && state.CD(CDGroup.SoulSlice) - 30 < state.GCD && (state.ComboTimeLeft > 5 || state.ComboTimeLeft == 0) && state.CD(CDGroup.ArcaneCircle) > 11.5f)
                         return true;
                     if (state.HasEnshroud)
                         return false;
                     if (state.HasSoulReaver)
-                        return false;
-                    if (state.ArcaneCircleLeft > state.AnimationLock && state.ComboTimeLeft < 15.5)
                         return false;
                     return false;
             }

@@ -142,6 +142,7 @@ namespace BossMod.RPR
 
             _state.GCDTime = ActionManagerEx.Instance!.GCDTime();
             _state.HasSoulReaver = Player.FindStatus(SID.SoulReaver) != null;
+            _state.EnshroudedLeft = StatusDetails(Player, SID.Enshrouded, Player.InstanceID).Left;
             _state.ImmortalSacrificeLeft = StatusDetails(Player, SID.ImmortalSacrifice, Player.InstanceID).Left;
             _state.ArcaneCircleLeft = StatusDetails(Player, SID.ArcaneCircle, Player.InstanceID).Left;
             _state.EnhancedGibbetLeft = StatusDetails(Player, SID.EnhancedGibbet, Player.InstanceID).Left;
