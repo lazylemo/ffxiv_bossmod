@@ -534,7 +534,7 @@ namespace BossMod.RPR
 
             if (strategy.PotionStrategy == Strategy.PotionUse.Special && state.HasSoulsow && (state.CD(CDGroup.ArcaneCircle) < 12 || state.CD(CDGroup.ArcaneCircle) > 115))
             {
-                if (state.LemureShroudCount == 2 && state.CD(CDGroup.ArcaneCircle) < 0.2)
+                if (state.LemureShroudCount == 2 && state.CD(CDGroup.ArcaneCircle) < 1)
                     return AID.ArcaneCircle;
                 if (state.HasSoulReaver)
                     return GetNextBSAction(state, aoe);
