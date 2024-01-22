@@ -8,5 +8,8 @@
 
         [PropertyDisplay("Forbid Harpe too early in prepull")]
         public bool ForbidEarlyHarpe = true;
+
+        [PropertyDisplay("Ignore TTK")]
+        public bool IgnoreTTK = true;
     }
 }

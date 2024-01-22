@@ -457,7 +457,7 @@ namespace BossMod.SAM
                 return true;
             if (state.HasFugetsu && state.HasFuka && !aoe && state.OgiNamikiriReady > state.AnimationLock && state.TargetHiganbanaLeft >= 5 && state.CD(CDGroup.TsubameGaeshi) > 10 && state.CD(CDGroup.TsubameGaeshi) < 60 && !state.HasMeikyoShisui)
                 return true;
-            if (state.HasFugetsu && state.HasFuka && !aoe && state.OgiNamikiriReady > state.AnimationLock && state.CD(CDGroup.TsubameGaeshi) > 10 && state.CD(CDGroup.TsubameGaeshi) < 60 && strategy.HiganbanaStrategy == Strategy.HiganbanaUse.Delay && state.HasMeikyoShisui && state.MeikyoShisuiLeft > (state.MeikyoShisuiStacks == 1 ? state.GCDTime * 1 : state.MeikyoShisuiStacks == 2 ? state.GCDTime * 2 : state.MeikyoShisuiStacks == 3 ? state.GCDTime * 3 : 0))
+            if (state.HasFugetsu && state.HasFuka && !aoe && state.OgiNamikiriReady > state.AnimationLock && state.CD(CDGroup.TsubameGaeshi) > 10 && state.CD(CDGroup.TsubameGaeshi) < 60 && strategy.HiganbanaStrategy == Strategy.HiganbanaUse.Delay && state.HasMeikyoShisui && state.MeikyoShisuiLeft > (state.MeikyoShisuiStacks == 1 ? state.GCDTime * 2 : state.MeikyoShisuiStacks == 2 ? state.GCDTime * 3 : state.MeikyoShisuiStacks == 3 ? state.GCDTime * 4 : 0))
                 return true;
             if (state.HasFugetsu && state.HasFuka && !aoe && state.OgiNamikiriReady > state.AnimationLock && state.TargetHiganbanaLeft >= 5 && state.CD(CDGroup.TsubameGaeshi) > 10 && state.CD(CDGroup.TsubameGaeshi) < 60 && state.HasMeikyoShisui && state.MeikyoShisuiLeft > (state.MeikyoShisuiStacks == 1 ? state.GCDTime*2 : state.MeikyoShisuiStacks == 2 ? state.GCDTime*3 : state.MeikyoShisuiStacks == 3 ? state.GCDTime*4 : 0))
                 return true;
@@ -472,7 +472,7 @@ namespace BossMod.SAM
                 return true;
             if (state.HasFugetsu && state.HasFuka && !aoe && state.OgiNamikiriReady > state.AnimationLock && state.TargetHiganbanaLeft >= 5 && state.CD(CDGroup.TsubameGaeshi) - 60 > 10 && state.CD(CDGroup.TsubameGaeshi) > 60 && !state.HasMeikyoShisui)
                 return true;
-            if (state.HasFugetsu && state.HasFuka && !aoe && state.OgiNamikiriReady > state.AnimationLock && state.CD(CDGroup.TsubameGaeshi) - 60 > 10 && state.CD(CDGroup.TsubameGaeshi) > 60 && strategy.HiganbanaStrategy == Strategy.HiganbanaUse.Delay && state.HasMeikyoShisui && state.MeikyoShisuiLeft > (state.MeikyoShisuiStacks == 1 ? state.GCDTime * 1 : state.MeikyoShisuiStacks == 2 ? state.GCDTime * 2 : state.MeikyoShisuiStacks == 3 ? state.GCDTime * 3 : 0))
+            if (state.HasFugetsu && state.HasFuka && !aoe && state.OgiNamikiriReady > state.AnimationLock && state.CD(CDGroup.TsubameGaeshi) - 60 > 10 && state.CD(CDGroup.TsubameGaeshi) > 60 && strategy.HiganbanaStrategy == Strategy.HiganbanaUse.Delay && state.HasMeikyoShisui && state.MeikyoShisuiLeft > (state.MeikyoShisuiStacks == 1 ? state.GCDTime * 2 : state.MeikyoShisuiStacks == 2 ? state.GCDTime * 3 : state.MeikyoShisuiStacks == 3 ? state.GCDTime * 4 : 0))
                 return true;
             if (state.HasFugetsu && state.HasFuka && !aoe && state.OgiNamikiriReady > state.AnimationLock && state.TargetHiganbanaLeft >= 5 && state.CD(CDGroup.TsubameGaeshi) - 60 > 10 && state.CD(CDGroup.TsubameGaeshi) > 60 && state.HasMeikyoShisui && state.MeikyoShisuiLeft > (state.MeikyoShisuiStacks == 1 ? state.GCDTime * 2 : state.MeikyoShisuiStacks == 2 ? state.GCDTime * 3 : state.MeikyoShisuiStacks == 3 ? state.GCDTime * 4 : 0))
                 return true;

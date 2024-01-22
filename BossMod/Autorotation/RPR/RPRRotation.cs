@@ -1,4 +1,6 @@
 ﻿// CONTRIB: made by lazylemo, not checked
+using BossMod.Components;
+
 namespace BossMod.RPR
 {
     public static class Rotation
@@ -393,6 +395,8 @@ namespace BossMod.RPR
 
                     if (state.HasEnshroud)
                         return false;
+                    if (state.ShroudGauge >= 50 && state.TTK < 15 && !Service.Config.Get<RPRConfig>().IgnoreTTK)
+                        return true;
                     if (state.ArcaneCircleLeft > state.AnimationLock && state.ShroudGauge >= 50 && (state.ComboTimeLeft > 11 || state.ComboTimeLeft == 0) && state.CD(CDGroup.Enshroud) < state.GCD)
                         return true;
                     if ((state.CD(CDGroup.ArcaneCircle) < 9 || state.CD(CDGroup.ArcaneCircle) > 60) && state.ShroudGauge >= 50 && (state.ComboTimeLeft > 11 || state.ComboTimeLeft == 0) && state.CD(CDGroup.Enshroud) < state.GCD)
@@ -433,7 +437,7 @@ namespace BossMod.RPR
         {
             Strategy.PotionUse.Manual => false,
             Strategy.PotionUse.Opener => state.CD(CDGroup.ArcaneCircle) > state.GCD && state.CD(CDGroup.SoulSlice) > 0,
-            Strategy.PotionUse.Burst => state.CD(CDGroup.ArcaneCircle) < 9 && state.lastActionisSoD && state.TargetDeathDesignLeft > 28,
+            Strategy.PotionUse.Burst => state.CD(CDGroup.ArcaneCircle) < 9 && state.lastActionisSoD && state.TargetDeathDesignLeft > 28 && state.HasEnshroud,
             Strategy.PotionUse.Force => true,
             _ => false
         };
@@ -581,9 +585,12 @@ namespace BossMod.RPR
             if (state.HasEnshroud && !aoe)
             {
                 if ((state.LemureShroudCount == 5 && strategy.PotionStrategy == Strategy.PotionUse.Burst && !state.lastActionisSoD && state.PotionCD < 1 || state.LemureShroudCount == 3)
-                    && state.CD(CDGroup.ArcaneCircle) < 9)
+                    && state.CD(CDGroup.ArcaneCircle) < 9 && state.TTK > 10 && !Service.Config.Get<RPRConfig>().IgnoreTTK)
                     return AID.ShadowofDeath;
-                if ((state.LemureShroudCount == 5 && state.TargetDeathDesignLeft < 30 || state.LemureShroudCount == 3 && state.TargetDeathDesignLeft < 40) 
+                if ((state.LemureShroudCount == 5 && strategy.PotionStrategy == Strategy.PotionUse.Burst && !state.lastActionisSoD && state.PotionCD < 1 || state.LemureShroudCount == 3)
+    && state.CD(CDGroup.ArcaneCircle) < 9 && Service.Config.Get<RPRConfig>().IgnoreTTK)
+                    return AID.ShadowofDeath;
+                if ((state.LemureShroudCount == 5 || state.LemureShroudCount == 3) 
                     && strategy.PotionStrategy != Strategy.PotionUse.Burst
                     && (!state.lastActionisSoD)
                     && state.CD(CDGroup.ArcaneCircle) < 9)
@@ -624,7 +631,7 @@ namespace BossMod.RPR
         {
             if (strategy.PotionStrategy == Strategy.PotionUse.Special && state.HasSoulsow && (state.CD(CDGroup.ArcaneCircle) < 11.5f || state.CD(CDGroup.ArcaneCircle) > 115))
             {
-                if (state.CD(CDGroup.ArcaneCircle) < 7.5f && state.ShroudGauge >= 50 && state.CanWeave(CDGroup.Enshroud, 0.6f, deadline) && (state.ComboTimeLeft < 27.5) && strategy.EnshroudStrategy != Strategy.EnshroudUse.Delay)
+                if (state.CD(CDGroup.ArcaneCircle) < 7.5f && state.ShroudGauge >= 50 && state.CanWeave(CDGroup.Enshroud, 0.6f, deadline - state.OGCDSlotLength) && (state.ComboTimeLeft < 27.5) && strategy.EnshroudStrategy != Strategy.EnshroudUse.Delay)
                     return ActionID.MakeSpell(AID.Enshroud);
                 if (state.LemureShroudCount == 3 && state.CanWeave(state.PotionCD, 1.1f, deadline) && state.lastActionisSoD)
                     return CommonDefinitions.IDPotionStr;
@@ -638,7 +645,9 @@ namespace BossMod.RPR
                 return CommonDefinitions.IDPotionStr;
             if (ShouldUseTrueNorth(state, strategy) && state.CanWeave(CDGroup.TrueNorth - 45, 0.6f, deadline) && !aoe && state.GCD < 0.8)
                 return ActionID.MakeSpell(AID.TrueNorth);
-            if (ShouldUseEnshroud(state, strategy) && state.Unlocked(AID.Enshroud) && state.CanWeave(CDGroup.Enshroud, 0.6f, deadline))
+            if (ShouldUseEnshroud(state, strategy) && state.Unlocked(AID.Enshroud) && state.CanWeave(CDGroup.Enshroud, 0.6f, deadline - state.OGCDSlotLength) && state.CD(CDGroup.ArcaneCircle) < 10)
+                return ActionID.MakeSpell(AID.Enshroud);
+            if (ShouldUseEnshroud(state, strategy) && state.Unlocked(AID.Enshroud) && state.CanWeave(CDGroup.Enshroud, 0.6f, deadline) && state.CD(CDGroup.ArcaneCircle) > 10)
                 return ActionID.MakeSpell(AID.Enshroud);
             if (ShouldUseArcaneCircle(state, strategy) && state.Unlocked(AID.ArcaneCircle) && state.CanWeave(CDGroup.ArcaneCircle, 0.6f, deadline))
                 return ActionID.MakeSpell(AID.ArcaneCircle);

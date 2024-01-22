@@ -133,6 +133,20 @@ namespace BossMod
         private static ClassData DefineMNK()
         {
             var c = new ClassData(typeof(MNK.AID), MNK.Definitions.SupportedActions);
+            c.CooldownTracks.Add(new("Feint", ActionID.MakeSpell(MNK.AID.Feint), 22));
+            c.CooldownTracks.Add(new("ArmsL", ActionID.MakeSpell(MNK.AID.ArmsLength), 32));
+            c.CooldownTracks.Add(new("RoE", ActionID.MakeSpell(MNK.AID.RiddleOfEarth), 64));
+            c.CooldownTracks.Add(new("Mantra", ActionID.MakeSpell(MNK.AID.Mantra), 42));
+            c.StrategyTracks.Add(new("Dash", typeof(MNK.Rotation.Strategy.DashStrategy)));
+            c.StrategyTracks.Add(new("TrueN", typeof(CommonRotation.Strategy.OffensiveAbilityUse)));
+            c.StrategyTracks.Add(new("Nadi", typeof(MNK.Rotation.Strategy.NadiChoice)));
+            c.StrategyTracks.Add(new("RoF", typeof(MNK.Rotation.Strategy.FireStrategy)));
+            c.StrategyTracks.Add(new("RoW", typeof(CommonRotation.Strategy.OffensiveAbilityUse)));
+            c.StrategyTracks.Add(new("BHood", typeof(CommonRotation.Strategy.OffensiveAbilityUse)));
+            c.StrategyTracks.Add(
+                new("PerfBal", typeof(CommonRotation.Strategy.OffensiveAbilityUse))
+            );
+            c.StrategyTracks.Add(new("SSS", typeof(CommonRotation.Strategy.OffensiveAbilityUse)));
             return c;
         }
 
@@ -166,6 +180,8 @@ namespace BossMod
         {
             var c = new ClassData(typeof(RPR.AID), RPR.Definitions.SupportedActions);
             c.CooldownTracks.Add(new("ACrest", ActionID.MakeSpell(RPR.AID.ArcaneCrest), 40));
+            c.CooldownTracks.Add(new("Bbath", ActionID.MakeSpell(RPR.AID.Bloodbath), 12));
+            c.CooldownTracks.Add(new("Swind", ActionID.MakeSpell(RPR.AID.SecondWind), 8));
             c.CooldownTracks.Add(new("Feint", ActionID.MakeSpell(RPR.AID.Feint), 22));
             c.CooldownTracks.Add(new("ArmsL", ActionID.MakeSpell(RPR.AID.ArmsLength), 32));
             c.CooldownTracks.Add(new("Sprint", CommonDefinitions.IDSprint, 1));
