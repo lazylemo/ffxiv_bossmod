@@ -591,7 +591,7 @@ namespace BossMod.MNK
 
             return strategy.NumPointBlankAOETargets == 0
                 && state.FireLeft > state.GCD
-                && state.LeadenFistLeft == 0;
+                && state.CD(CDGroup.RiddleOfFire) < 60 - state.AttackGCDTime;
         }
 
         private static bool ShouldUsePB(State state, Strategy strategy, float deadline)

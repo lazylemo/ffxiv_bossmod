@@ -132,7 +132,7 @@ namespace BossMod.SAM
             if (_state.ComboLastMove == AID.Gekko || _state.ComboLastMove == AID.Kasha || _state.ComboLastMove == AID.Yukikaze || _state.ComboLastMove == AID.Mangetsu || _state.ComboLastMove == AID.Oka)
                 _state.ComboTimeLeft = 0;
 
-            _state.GCDTime = ActionManagerEx.Instance!.GCDTime();
+            _state.GCDTime = _state.AttackGCDTime;
             _state.HasFugetsu = Player.FindStatus(SID.Fugetsu) != null;
             _state.HasFuka = Player.FindStatus(SID.Fuka) != null;
             _state.HasMeikyoShisui = Player.FindStatus(SID.MeikyoShisui) != null;

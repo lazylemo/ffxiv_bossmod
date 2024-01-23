@@ -238,6 +238,14 @@ namespace BossMod.SAM
             bool senCountIs1AndHiganbanaCondition8 = state.SenCount == 1 && state.TargetHiganbanaLeft < (state.GCDTime) * 4 && Service.Config.Get<SAMConfig>().EarlyHiganbana;
             bool senCountIs1AndHiganbanaCondition9 = state.SenCount == 0 && state.TargetHiganbanaLeft < (state.GCDTime) * 4 && Service.Config.Get<SAMConfig>().EarlyHiganbana;
             bool senCountIs0AndHiganbanaCondition6 = state.SenCount == 0 && state.TargetHiganbanaLeft < (state.GCDTime) * 6 && state.CD(CDGroup.TsubameGaeshi) - 60 < (state.GCDTime) * 4 && !Service.Config.Get<SAMConfig>().Filler && state.CD(CDGroup.Ikishoten) < 15;
+            bool senCountIs0AndHagakureCondition1 = state.SenCount == 0 && state.CD(CDGroup.TsubameGaeshi) < (state.GCDTime) * 10 && state.CD(CDGroup.TsubameGaeshi) > (state.GCDTime) * 8 && Fillerdone == false && Service.Config.Get<SAMConfig>().Filler;
+
+//            if (!hasSetsu
+//&& unlockedYukikaze
+//&& hasFugetsu
+//&& hasFuka
+//&& senCountIs1AndHiganbanaCondition9)
+//                return false;
 
             if (!hasSetsu
 && unlockedYukikaze
@@ -676,6 +684,19 @@ namespace BossMod.SAM
             if (state.Gauge.Kaeshi == Kaeshi.NAMIKIRI)
                 return state.BestTsubame;
 
+            if (state.Gauge.Kaeshi == Kaeshi.SETSUGEKKA && state.CD(CDGroup.TsubameGaeshi) < 0.6)
+                return state.BestTsubame;
+
+            if (state.SenCount == 3)
+            {
+                if (state.ComboLastMove == AID.Jinpu)
+                    return state.BestIaijutsu;
+                if (state.ComboLastMove == AID.Shifu)
+                    return state.BestIaijutsu;
+                if (state.HasMeikyoShisui)
+                    return state.BestIaijutsu;
+            }
+
             if (ShouldUseTsubameGaeshi(state, strategy, aoe))
                 return state.BestTsubame;
             if (ShouldUseOgiNamikiri(state, strategy, aoe))
@@ -764,6 +785,8 @@ namespace BossMod.SAM
 
             if (Service.Config.Get<SAMConfig>().Filler && !aoe && !Service.Config.Get<SAMConfig>().EarlyHiganbana)
             {
+                if (state.CanWeave(CDGroup.Hagakure, 0.6f, deadline) && state.CD(CDGroup.Ikishoten) < 60 && state.SenCount == 1 && state.Gauge.HasSetsu && !state.HasMeikyoShisui && Fillerdone == false && state.TTK > 45 && !Service.Config.Get<SAMConfig>().TTKignore && state.CD(CDGroup.TsubameGaeshi) < (state.GCDTime) * 13 && state.CD(CDGroup.TsubameGaeshi) > (state.GCDTime) * 8)
+                    return ActionID.MakeSpell(AID.Hagakure);
                 if (state.CanWeave(CDGroup.Hagakure, 0.6f, deadline) && state.CD(CDGroup.Ikishoten) < 60 && state.SenCount == 1 && !state.HasMeikyoShisui && Fillerdone == false && state.TTK > 45 && !Service.Config.Get<SAMConfig>().TTKignore && state.CD(CDGroup.TsubameGaeshi) < (state.GCDTime) * 10 && state.CD(CDGroup.TsubameGaeshi) > (state.GCDTime) * 8)
                     return ActionID.MakeSpell(AID.Hagakure);
                 if (state.CanWeave(CDGroup.Hagakure, 0.6f, deadline) && state.CD(CDGroup.Ikishoten) < 60 && state.SenCount == 1 && !state.HasMeikyoShisui && Fillerdone == false && Service.Config.Get<SAMConfig>().TTKignore && state.CD(CDGroup.TsubameGaeshi) < (state.GCDTime) * 10 && state.CD(CDGroup.TsubameGaeshi) > (state.GCDTime) * 8)

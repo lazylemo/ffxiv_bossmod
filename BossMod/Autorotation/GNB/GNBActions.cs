@@ -114,7 +114,7 @@ namespace BossMod.GNB
             if (_state.ComboLastMove == AID.SolidBarrel)
                 _state.ComboTimeLeft = 0;
 
-            _state.GCDTime = ActionManagerEx.Instance!.GCDTime();
+            _state.GCDTime = _state.AttackGCDTime;
             _state.Ammo = Service.JobGauges.Get<GNBGauge>().Ammo;
             _state.GunComboStep = Service.JobGauges.Get<GNBGauge>().AmmoComboStep;
             _state.MaxCartridges = _state.Unlocked(TraitID.CartridgeChargeII) ? 3 : 2;
