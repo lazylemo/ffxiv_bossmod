@@ -162,7 +162,7 @@ namespace BossMod.MNK
                 : AutoActionNone;
 
             // combo replacement
-            SupportedSpell(AID.FourPointFury).TransformAction = _config.AOECombos ? () => ActionID.MakeSpell(Rotation.GetNextComboAction(_state, 100, false, Rotation.Strategy.NadiChoice.Automatic)) : null;
+            SupportedSpell(AID.FourPointFury).TransformAction = _config.AOECombos ? () => ActionID.MakeSpell(Rotation.GetNextComboAction(_state, _strategy, 100, false, Rotation.Strategy.NadiChoice.Automatic)) : null;
 
             SupportedSpell(AID.Thunderclap).Condition = _config.PreventCloseDash
                 ? ((act) => act == null || !act.Position.InCircle(Player.Position, 3))

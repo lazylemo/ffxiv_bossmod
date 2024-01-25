@@ -520,6 +520,7 @@ namespace BossMod
 
             // Default return value when conditions are not met
             return float.PositiveInfinity;
+        }
             
         protected (AIHints.Enemy Target, int Priority) FindBetterTargetBy(AIHints.Enemy initial, float maxDistanceFromPlayer, Func<AIHints.Enemy, int> prioFunc)
         {

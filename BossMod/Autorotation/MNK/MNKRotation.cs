@@ -1,4 +1,5 @@
-﻿using System.Collections;
+﻿using System;
+using System.Collections;
 using System.Linq;
 using System.Linq.Expressions;
 using BossMod.Components;
@@ -6,8 +7,6 @@ using BossMod.Endwalker.Criterion.C03AAI.C031Ketuduke;
 using Dalamud.Game.ClientState.JobGauge.Enums;
 using static BossMod.CommonRotation.Strategy;
 ﻿// CONTRIB: made by xan, not checked
-using System.Linq;
-using Dalamud.Game.ClientState.JobGauge.Enums;
 
 namespace BossMod.MNK
 {
@@ -221,32 +220,6 @@ namespace BossMod.MNK
                     SSSUse = OffensiveAbilityUse.Automatic;
                     PotionStrategy = PotionUse.Manual;
                     DragonKickSpam = DragonKickStrat.Manual;
-                }
-            }
-
-            public void ApplyStrategyOverrides(uint[] overrides)
-            {
-                if (overrides.Length >= 7)
-                {
-                    DashUse = (DashStrategy)overrides[0];
-                    TrueNorthUse = (OffensiveAbilityUse)overrides[1];
-                    NextNadi = (NadiChoice)overrides[2];
-                    FireUse = (FireStrategy)overrides[3];
-                    WindUse = (OffensiveAbilityUse)overrides[4];
-                    BrotherhoodUse = (OffensiveAbilityUse)overrides[5];
-                    PerfectBalanceUse = (OffensiveAbilityUse)overrides[6];
-                    SSSUse = (OffensiveAbilityUse)overrides[7];
-                }
-                else
-                {
-                    DashUse = DashStrategy.Automatic;
-                    TrueNorthUse = OffensiveAbilityUse.Automatic;
-                    NextNadi = NadiChoice.Automatic;
-                    FireUse = FireStrategy.Automatic;
-                    WindUse = OffensiveAbilityUse.Automatic;
-                    BrotherhoodUse = OffensiveAbilityUse.Automatic;
-                    PerfectBalanceUse = OffensiveAbilityUse.Automatic;
-                    SSSUse = OffensiveAbilityUse.Automatic;
                 }
             }
         }
@@ -463,7 +436,7 @@ namespace BossMod.MNK
             if (state.Unlocked(AID.SixSidedStar) && strategy.SSSUse == OffensiveAbilityUse.Force)
                 return AID.SixSidedStar;
 
-            if (state.BestBlitz != AID.MasterfulBlitz && state.FireLeft >= state.GCD && state.CD(CDGroup.RiddleOfFire) > 0 && state.CD(CDGroup.Brotherhood) > 0)
+            if (state.BestBlitz != AID.MasterfulBlitz && state.DisciplinedFistLeft > state.GCD && state.FireLeft >= state.GCD && state.CD(CDGroup.RiddleOfFire) > 0 && state.CD(CDGroup.Brotherhood) > 0)
                 return state.BestBlitz;
 
             if (
