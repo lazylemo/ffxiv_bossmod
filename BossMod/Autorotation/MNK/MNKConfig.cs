@@ -1,4 +1,4 @@
-﻿namespace BossMod
+namespace BossMod
 {
     [ConfigDisplay(Parent = typeof(AutorotationConfig))]
     class MNKConfig : ConfigNode
@@ -22,7 +22,7 @@
 
         [PropertyDisplay("Ignore TTK")]
         public bool IgnoreTTK = true;
-
+        
         [PropertyDisplay("Use Form Shift out of combat")]
         public bool AutoFormShift = false;
     }

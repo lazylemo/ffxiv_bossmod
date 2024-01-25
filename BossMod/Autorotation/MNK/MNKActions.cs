@@ -20,21 +20,11 @@ namespace BossMod.MNK
             _strategy = new();
 
             // upgrades
-            SupportedSpell(AID.SteelPeak).TransformAction = SupportedSpell(
-                AID.ForbiddenChakra
-            ).TransformAction = () => ActionID.MakeSpell(_state.BestForbiddenChakra);
-            SupportedSpell(AID.Meditation).TransformAction = () =>
-                ActionID.MakeSpell(
-                    _state.Chakra == 5 ? _state.BestForbiddenChakra : AID.Meditation
-                );
-            SupportedSpell(AID.HowlingFist).TransformAction = SupportedSpell(
-                AID.Enlightenment
-            ).TransformAction = () => ActionID.MakeSpell(_state.BestEnlightenment);
-            SupportedSpell(AID.ArmOfTheDestroyer).TransformAction = SupportedSpell(
-                AID.ShadowOfTheDestroyer
-            ).TransformAction = () => ActionID.MakeSpell(_state.BestShadowOfTheDestroyer);
-            SupportedSpell(AID.MasterfulBlitz).TransformAction = () =>
-                ActionID.MakeSpell(_state.BestBlitz);
+            SupportedSpell(AID.SteelPeak).TransformAction = SupportedSpell(AID.ForbiddenChakra).TransformAction = () => ActionID.MakeSpell(_state.BestForbiddenChakra);
+            SupportedSpell(AID.HowlingFist).TransformAction = SupportedSpell(AID.Enlightenment).TransformAction = () => ActionID.MakeSpell(_state.BestEnlightenment);
+            SupportedSpell(AID.Meditation).TransformAction = () => ActionID.MakeSpell(_state.Chakra == 5 ? _state.BestForbiddenChakra : AID.Meditation);
+            SupportedSpell(AID.ArmOfTheDestroyer).TransformAction = SupportedSpell(AID.ShadowOfTheDestroyer).TransformAction = () => ActionID.MakeSpell(_state.BestShadowOfTheDestroyer);
+            SupportedSpell(AID.MasterfulBlitz).TransformAction = () => ActionID.MakeSpell(_state.BestBlitz);
 
             _config.Modified += OnConfigModified;
             OnConfigModified(null, EventArgs.Empty);
@@ -74,25 +64,10 @@ namespace BossMod.MNK
         {
             UpdatePlayerState();
             FillCommonStrategy(_strategy, CommonDefinitions.IDPotionStr);
-            _strategy.ApplyStrategyOverrides(
-                Autorot
-                    .Bossmods.ActiveModule?.PlanExecution
-                    ?.ActiveStrategyOverrides(Autorot.Bossmods.ActiveModule.StateMachine)
-                    ?? new uint[0]
-            );
-            _strategy.NumPointBlankAOETargets =
-                autoAction == AutoActionST ? 0 : NumTargetsHitByPBAOE();
-            _strategy.NumEnlightenmentTargets =
-                Autorot.PrimaryTarget != null
-                && autoAction != AutoActionST
-                && _state.Unlocked(AID.HowlingFist)
-                    ? NumTargetsHitByEnlightenment(Autorot.PrimaryTarget)
-                    : 0;
-            FillStrategyPositionals(
-                _strategy,
-                Rotation.GetNextPositional(_state, _strategy),
-                _state.TrueNorthLeft > _state.GCD
-            );
+            _strategy.ApplyStrategyOverrides(Autorot.Bossmods.ActiveModule?.PlanExecution?.ActiveStrategyOverrides(Autorot.Bossmods.ActiveModule.StateMachine) ?? new uint[0]);
+            _strategy.NumPointBlankAOETargets = autoAction == AutoActionST ? 0 : NumTargetsHitByPBAOE();
+            _strategy.NumEnlightenmentTargets = Autorot.PrimaryTarget != null && autoAction != AutoActionST && _state.Unlocked(AID.HowlingFist) ? NumTargetsHitByEnlightenment(Autorot.PrimaryTarget) : 0;
+            FillStrategyPositionals(_strategy, Rotation.GetNextPositional(_state, _strategy), _state.TrueNorthLeft > _state.GCD);
         }
 
         protected override void QueueAIActions()
@@ -155,20 +130,11 @@ namespace BossMod.MNK
                 Player.InstanceID
             ).Left;
             _state.LeadenFistLeft = StatusDetails(Player, SID.LeadenFist, Player.InstanceID).Left;
-            _state.PerfectBalanceLeft = StatusDetails(
-                Player,
-                SID.PerfectBalance,
-                Player.InstanceID
-            ).Left;
+            _state.PerfectBalanceLeft = StatusDetails(Player, SID.PerfectBalance, Player.InstanceID).Left;
             _state.FormShiftLeft = StatusDetails(Player, SID.FormlessFist, Player.InstanceID).Left;
             _state.FireLeft = StatusDetails(Player, SID.RiddleOfFire, Player.InstanceID).Left;
             _state.TrueNorthLeft = StatusDetails(Player, SID.TrueNorth, Player.InstanceID).Left;
-
-            _state.TargetDemolishLeft = StatusDetails(
-                Autorot.PrimaryTarget,
-                SID.Demolish,
-                Player.InstanceID
-            ).Left;
+            _state.TargetDemolishLeft = StatusDetails(Autorot.PrimaryTarget, SID.Demolish, Player.InstanceID).Left;
         }
 
         private (Rotation.Form, float) DetermineForm()
@@ -196,34 +162,13 @@ namespace BossMod.MNK
                 : AutoActionNone;
 
             // combo replacement
-            SupportedSpell(AID.FourPointFury).TransformAction = _config.AOECombos
-                ? () =>
-                    ActionID.MakeSpell(
-                        Rotation.GetNextComboAction(
-                            _state,
-                            _strategy,
-                            100,
-                            false,
-                            Rotation.Strategy.NadiChoice.Automatic
-                        )
-                    )
+            SupportedSpell(AID.FourPointFury).TransformAction = _config.AOECombos ? () => ActionID.MakeSpell(Rotation.GetNextComboAction(_state, 100, false, Rotation.Strategy.NadiChoice.Automatic)) : null;
+
+            SupportedSpell(AID.Thunderclap).Condition = _config.PreventCloseDash
+                ? ((act) => act == null || !act.Position.InCircle(Player.Position, 3))
                 : null;
 
-            SupportedSpell(AID.Thunderclap).Condition = !_config.PreventCloseDash
-                ? null
-                : (act) =>
-                {
-                    if (act == null)
-                        return false;
-                    return (act.Position - Player.Position).Length()
-                            - act.HitboxRadius
-                            - Player.HitboxRadius
-                        > 3;
-                };
-
-            SupportedSpell(AID.Thunderclap).TransformTarget = _config.SmartThunderclap
-                ? (act) => Autorot.SecondaryTarget ?? act
-                : null;
+            SupportedSpell(AID.Thunderclap).TransformTarget = _config.SmartThunderclap ? (act) => Autorot.SecondaryTarget ?? act : null;
 
             _strategy.PreCombatFormShift = _config.AutoFormShift;
 
