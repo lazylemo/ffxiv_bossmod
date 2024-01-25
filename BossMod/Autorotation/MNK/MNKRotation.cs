@@ -384,7 +384,7 @@ namespace BossMod.MNK
 
         private static bool SolarTime(State state, Strategy.NadiChoice nextNadi)
         {
-            bool recentDemo = state.TargetDemolishLeft > 12;
+            bool recentDemo = state.TargetDemolishLeft > 10;
             bool recentTwin = state.DisciplinedFistLeft > 8;
             if (state.PerfectBalanceLeft <= state.GCD)
                 return false;
@@ -408,6 +408,8 @@ namespace BossMod.MNK
 
         public static AID GetNextBestGCD(State state, Strategy strategy)
         {
+            bool recentDemo = state.TargetDemolishLeft > 10;
+            bool recentTwin = state.DisciplinedFistLeft > 8;
             if (strategy.CombatTimer < 0)
             {
                 if (state.Chakra < 5)
@@ -456,6 +458,9 @@ namespace BossMod.MNK
                 && (strategy.FightEndIn > state.GCD
                 && strategy.FightEndIn < state.GCD + state.AttackGCDTime * 5) && state.DisciplinedFistLeft > state.AttackGCDTime * 1)
                 return state.LeadenFistLeft > 0 ? AID.Bootshine : AID.DragonKick;
+
+            if (state.PerfectBalanceLeft > 0 && recentDemo && recentTwin && (!state.HasLunar || (state.HasLunar || state.HasSolar)))
+                return GetOpoOpoFormAction(state, strategy.NumPointBlankAOETargets);
 
             // TODO: L52+
             return GetNextComboAction(
@@ -610,8 +615,7 @@ namespace BossMod.MNK
             else
             {
                 var buffWait =
-                    strategy.FireUse == Strategy.FireStrategy.Automatic
-                    || state.CD(CDGroup.Brotherhood) < 4;
+                    strategy.FireUse == Strategy.FireStrategy.Automatic;
 
                 // cooldown alignment for braindead looping rotation
                 // TODO: implement optimal drift (it can't be that hard with math, right?)
@@ -649,13 +653,13 @@ namespace BossMod.MNK
 
             return strategy.NumPointBlankAOETargets == 0
                 && state.FireLeft > state.GCD
-                && ((state.CD(CDGroup.RiddleOfFire) < 60 - (state.AttackGCDTime + 0.5f)
-                    || (state.PerfectBalanceLeft > state.AnimationLock && state.CD(CDGroup.RiddleOfFire) < 1.2)));
+                && ((state.CD(CDGroup.RiddleOfFire) < 60 - (state.AttackGCDTime + 0.5f))
+                    || (state.PerfectBalanceLeft > state.AnimationLock && state.CD(CDGroup.RiddleOfFire) < 1.2));
         }
 
         private static bool ShouldUsePB(State state, Strategy strategy, float deadline)
         {
-            bool recentDemo = state.TargetDemolishLeft > 12;
+            bool recentDemo = state.TargetDemolishLeft > 10;
             bool recentTwin = state.DisciplinedFistLeft > 8;
             if (
                 state.PerfectBalanceLeft > 0
@@ -669,13 +673,13 @@ namespace BossMod.MNK
                 return true;
             if (strategy.PerfectBalanceStrategy == Strategy.PerfectBalanceUse.Lunar)
             {
-                if (recentDemo && recentTwin)
+                if (recentDemo && recentTwin && state.Form == Form.Raptor)
                     return true;
                 return false;
             }
             if (strategy.PerfectBalanceStrategy == Strategy.PerfectBalanceUse.Solar)
             {
-                if (!recentDemo && !recentTwin)
+                if (!recentDemo && !recentTwin && state.Form == Form.Raptor)
                     return true;
                 return false;
             }
