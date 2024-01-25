@@ -1,5 +1,6 @@
 ﻿// CONTRIB: made by lazylemo, not checked
 using BossMod.Components;
+using static BossMod.CommonRotation.Strategy;
 
 namespace BossMod.RPR
 {
@@ -79,6 +80,9 @@ namespace BossMod.RPR
 
                 [PropertyDisplay("Use combo, unless it can't be finished before downtime", 0x80c0c000)]
                 ComboFitBeforeDowntime = 5,
+
+                [PropertyDisplay("Use Shadow of Death before downtime", 0x82000080)]
+                DDBeforeDownTime = 6,
             }
 
             public enum BloodstalkUse : uint
@@ -294,6 +298,9 @@ namespace BossMod.RPR
                     if (ShouldUseEnshroud(state, strategy) && state.CD(CDGroup.Enshroud) < state.GCD)
                         return false;
 
+                    if ((state.CD(CDGroup.ArcaneCircle) < 6 || state.CD(CDGroup.ArcaneCircle) > 107.5) && (state.ComboTimeLeft < 15.5 || state.ComboTimeLeft == 0))
+                        return false;
+
                     if (state.SoulGauge >= 50 && (state.CD(CDGroup.Gluttony) > 28 || ((state.CD(CDGroup.SoulSlice) - 30 < state.CD(CDGroup.Gluttony)) && state.CD(CDGroup.Gluttony) > state.AnimationLock)) && !aoe && (state.ComboTimeLeft > 2.5 || state.ComboTimeLeft == 0) && state.ShroudGauge <= 90 && state.CD(CDGroup.ArcaneCircle) > 6)
                         return true;
 
@@ -303,8 +310,6 @@ namespace BossMod.RPR
                     if (state.SoulGauge >= 50 && !aoe && (state.ComboTimeLeft > 2.5 || state.ComboTimeLeft == 0) && state.ImmortalSacrificeLeft > state.AnimationLock && state.BloodsownCircleLeft > 4.8f && (state.CD(CDGroup.SoulSlice) > 30 || state.CD(CDGroup.SoulSlice) < 60) && state.ShroudGauge <= 40)
                         return true;
 
-                    if ((state.CD(CDGroup.ArcaneCircle) < 6 || state.CD(CDGroup.ArcaneCircle) > 60) && state.ShroudGauge >= 50 && (state.ComboTimeLeft > 12 || state.ComboTimeLeft == 0))
-                        return false;
                     return false;
             }
         }
@@ -498,9 +503,9 @@ namespace BossMod.RPR
                 default:
                     if (!state.TargetingEnemy)
                         return false;
-                    if (state.ArcaneCircleLeft > state.AnimationLock && (state.ComboTimeLeft < 13 && state.ComboTimeLeft > state.AnimationLock) && state.ShroudGauge >= 50)
+                    if (state.ArcaneCircleLeft > state.AnimationLock && (state.ComboTimeLeft < 15.5 && state.ComboTimeLeft > state.AnimationLock) && (state.CD(CDGroup.Enshroud) > state.AnimationLock || state.ShroudGauge >= 50))
                         return false;
-                    if (state.SoulGauge <= 50 && state.CD(CDGroup.SoulSlice) - 30 < state.GCD && state.ArcaneCircleLeft > state.AnimationLock && (state.ComboTimeLeft < 13 && state.ComboTimeLeft > state.AnimationLock) && state.CD(CDGroup.ArcaneCircle) > 11.5f)
+                    if (state.SoulGauge <= 50 && state.CD(CDGroup.SoulSlice) - 30 < state.GCD && state.ArcaneCircleLeft > state.AnimationLock && (state.ComboTimeLeft < 15.5 && state.ComboTimeLeft > state.AnimationLock) && state.CD(CDGroup.ArcaneCircle) > 11.5f)
                         return false;
                     if (state.SoulGauge <= 50 && state.CD(CDGroup.SoulSlice) - 30 < state.GCD && (state.ComboTimeLeft > 5 || state.ComboTimeLeft == 0) && state.CD(CDGroup.ArcaneCircle) > 11.5f)
                         return true;
@@ -535,6 +540,15 @@ namespace BossMod.RPR
                 return AID.Harpe;
             if (strategy.GaugeStrategy == Strategy.GaugeUse.ForceExtendDD && state.Unlocked(AID.ShadowofDeath) && !state.HasSoulReaver)
                 return aoe ? AID.WhorlofDeath : AID.ShadowofDeath;
+
+            if (strategy.GaugeStrategy == Strategy.GaugeUse.DDBeforeDownTime
+                && (strategy.FightEndIn > state.GCD
+                && strategy.FightEndIn < state.GCD + state.AttackGCDTime)
+                && state.Unlocked(AID.ShadowofDeath))
+                return AID.ShadowofDeath;
+
+            if (!Service.Config.Get<RPRConfig>().IgnoreTTKCommunio && state.TTK < 1.3 && state.HasEnshroud)
+                return AID.Communio;
 
             if (strategy.PotionStrategy == Strategy.PotionUse.Special && state.HasSoulsow && (state.CD(CDGroup.ArcaneCircle) < 12 || state.CD(CDGroup.ArcaneCircle) > 115))
             {
@@ -590,7 +604,7 @@ namespace BossMod.RPR
                 if ((state.LemureShroudCount == 5 && strategy.PotionStrategy == Strategy.PotionUse.Burst && !state.lastActionisSoD && state.PotionCD < 1 || state.LemureShroudCount == 3)
     && state.CD(CDGroup.ArcaneCircle) < 9 && Service.Config.Get<RPRConfig>().IgnoreTTK)
                     return AID.ShadowofDeath;
-                if ((state.LemureShroudCount == 5 || state.LemureShroudCount == 3) 
+                if (((state.LemureShroudCount == 5 && state.CD(CDGroup.Enshroud) > 12f) || (state.LemureShroudCount == 3 && state.CD(CDGroup.Enshroud) > 6f))
                     && strategy.PotionStrategy != Strategy.PotionUse.Burst
                     && (!state.lastActionisSoD)
                     && state.CD(CDGroup.ArcaneCircle) < 9)

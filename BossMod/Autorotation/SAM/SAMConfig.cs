@@ -15,6 +15,9 @@ namespace BossMod
         [PropertyDisplay("Ignore TTK only for Higanbana")]
         public bool TTKignoreHiganbanaOnly = true;
 
+        [PropertyDisplay("Use both Tsubame charges")]
+        public bool UseBothTsubameCharges = true;
+
         [PropertyDisplay("Early Higanbana")]
         public bool EarlyHiganbana = true;
     }

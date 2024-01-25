@@ -11,5 +11,8 @@
 
         [PropertyDisplay("Ignore TTK")]
         public bool IgnoreTTK = true;
+
+        [PropertyDisplay("Ignore TTK (Communio only)")]
+        public bool IgnoreTTKCommunio = true;
     }
 }

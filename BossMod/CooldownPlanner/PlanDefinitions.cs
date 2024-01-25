@@ -143,10 +143,10 @@ namespace BossMod
             c.StrategyTracks.Add(new("RoF", typeof(MNK.Rotation.Strategy.FireStrategy)));
             c.StrategyTracks.Add(new("RoW", typeof(CommonRotation.Strategy.OffensiveAbilityUse)));
             c.StrategyTracks.Add(new("BHood", typeof(CommonRotation.Strategy.OffensiveAbilityUse)));
-            c.StrategyTracks.Add(
-                new("PerfBal", typeof(CommonRotation.Strategy.OffensiveAbilityUse))
-            );
+            c.StrategyTracks.Add(new("PerfBal", typeof(MNK.Rotation.Strategy.PerfectBalanceUse)));
             c.StrategyTracks.Add(new("SSS", typeof(CommonRotation.Strategy.OffensiveAbilityUse)));
+            c.StrategyTracks.Add(new("Pot", typeof(MNK.Rotation.Strategy.PotionUse), 270));
+            c.StrategyTracks.Add(new("DK", typeof(MNK.Rotation.Strategy.DragonKickStrat)));
             return c;
         }
 
