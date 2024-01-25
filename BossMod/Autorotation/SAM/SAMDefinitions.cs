@@ -204,7 +204,7 @@ namespace BossMod.SAM
             SupportedActions.GCDCast(AID.TenkaGoken, 8, 1.8f);
             SupportedActions.GCD(AID.Oka, 5);
             SupportedActions.GCDCast(AID.MidareSetsugekka, 6, 1.8f);
-            SupportedActions.OGCDWithCharges(AID.MeikyoShisui, 0, CDGroup.MeikyoShisui, 55.0f, 2);
+            SupportedActions.OGCDWithCharges(AID.MeikyoShisui, 0, CDGroup.MeikyoShisui, 55.0f, 2).EffectDuration = 15;
             SupportedActions.GCD(AID.Yukikaze, 3);
             SupportedActions.OGCDWithCharges(AID.TrueNorth, 0, CDGroup.TrueNorth, 45.0f, 2).EffectDuration = 10;
             SupportedActions.OGCD(AID.HissatsuShinten, 3, CDGroup.HissatsuShinten, 1.0f);

@@ -680,7 +680,6 @@ namespace BossMod.SAM
             bool Fukabuff = state.FukaLeft > state.AnimationLock;
             if (strategy.CombatTimer > -100 && strategy.CombatTimer < -0.7f)
                 return AID.None;
-
             if (state.Gauge.Kaeshi == Kaeshi.NAMIKIRI)
                 return state.BestTsubame;
 

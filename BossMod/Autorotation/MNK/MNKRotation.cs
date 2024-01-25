@@ -5,6 +5,9 @@ using BossMod.Components;
 using BossMod.Endwalker.Criterion.C03AAI.C031Ketuduke;
 using Dalamud.Game.ClientState.JobGauge.Enums;
 using static BossMod.CommonRotation.Strategy;
+﻿// CONTRIB: made by xan, not checked
+using System.Linq;
+using Dalamud.Game.ClientState.JobGauge.Enums;
 
 namespace BossMod.MNK
 {
@@ -22,7 +25,7 @@ namespace BossMod.MNK
         public class State : CommonRotation.PlayerState
         {
             public int Chakra; // 0-5
-            public BeastChakra[] BeastChakra;
+            public BeastChakra[] BeastChakra = [];
             public Nadi Nadi;
             public Form Form;
             public float FormLeft; // 0 if no form, 30 max
@@ -77,8 +80,7 @@ namespace BossMod.MNK
                 }
             }
 
-            public State(float[] cooldowns)
-                : base(cooldowns) { }
+            public State(float[] cooldowns) : base(cooldowns) { }
 
             public bool Unlocked(AID aid) => Definitions.Unlocked(aid, Level, UnlockProgress);
 
@@ -149,6 +151,32 @@ namespace BossMod.MNK
             public override string ToString()
             {
                 return $"AOE={NumPointBlankAOETargets}/{NumEnlightenmentTargets}, no-dots={ForbidDOTs}, {CombatTimer}";
+            }
+
+            public void ApplyStrategyOverrides(uint[] overrides)
+            {
+                if (overrides.Length >= 7)
+                {
+                    DashUse = (DashStrategy)overrides[0];
+                    TrueNorthUse = (OffensiveAbilityUse)overrides[1];
+                    NextNadi = (NadiChoice)overrides[2];
+                    FireUse = (FireStrategy)overrides[3];
+                    WindUse = (OffensiveAbilityUse)overrides[4];
+                    BrotherhoodUse = (OffensiveAbilityUse)overrides[5];
+                    PerfectBalanceUse = (OffensiveAbilityUse)overrides[6];
+                    SSSUse = (OffensiveAbilityUse)overrides[7];
+                }
+                else
+                {
+                    DashUse = DashStrategy.Automatic;
+                    TrueNorthUse = OffensiveAbilityUse.Automatic;
+                    NextNadi = NadiChoice.Automatic;
+                    FireUse = FireStrategy.Automatic;
+                    WindUse = OffensiveAbilityUse.Automatic;
+                    BrotherhoodUse = OffensiveAbilityUse.Automatic;
+                    PerfectBalanceUse = OffensiveAbilityUse.Automatic;
+                    SSSUse = OffensiveAbilityUse.Automatic;
+                }
             }
 
             public void ApplyStrategyOverrides(uint[] overrides)
@@ -402,14 +430,7 @@ namespace BossMod.MNK
             )
                 return AID.SixSidedStar;
 
-            // TODO: L52+
-            return GetNextComboAction(
-                state,
-                strategy,
-                strategy.NumPointBlankAOETargets,
-                strategy.ForbidDOTs,
-                strategy.NextNadi
-            );
+            return GetNextComboAction(state, strategy.NumPointBlankAOETargets, strategy.ForbidDOTs, strategy.NextNadi);
         }
 
         public static (Positional, bool) GetNextPositional(State state, Strategy strategy)
@@ -462,7 +483,7 @@ namespace BossMod.MNK
             if (
                 state.Unlocked(AID.SteelPeak)
                 && state.Chakra == 5
-                && state.CanWeave(CDGroup.SteelPeak, 0.5f, deadline)
+                && state.CanWeave(CDGroup.SteelPeak, 0.6f, deadline)
                 && (
                     // prevent early use in opener
                     state.CD(CDGroup.RiddleOfFire) > 0
@@ -497,7 +518,7 @@ namespace BossMod.MNK
 
             if (
                 ShouldUseTrueNorth(state, strategy)
-                && state.CanWeave(state.CD(CDGroup.TrueNorth) - 45, 0.5f, deadline)
+                && state.CanWeave(state.CD(CDGroup.TrueNorth) - 45, 0.6f, deadline)
             )
                 return ActionID.MakeSpell(AID.TrueNorth);
 
@@ -512,7 +533,7 @@ namespace BossMod.MNK
         {
             if (
                 state.RangeToTarget <= 3
-                || !state.CanWeave(state.CD(CDGroup.Thunderclap) - 60, 0.5f, deadline)
+                || !state.CanWeave(state.CD(CDGroup.Thunderclap) - 60, 0.6f, deadline)
                 || strategy.DashUse == Strategy.DashStrategy.Forbid
             )
                 return false;
@@ -536,7 +557,7 @@ namespace BossMod.MNK
             if (
                 !state.Unlocked(AID.RiddleOfFire)
                 || strategy.FireUse == Strategy.FireStrategy.Delay
-                || !state.CanWeave(CDGroup.RiddleOfFire, 0.5f, deadline)
+                || !state.CanWeave(CDGroup.RiddleOfFire, 0.6f, deadline)
             )
                 return false;
 
@@ -565,12 +586,12 @@ namespace BossMod.MNK
         {
             if (
                 !state.Unlocked(AID.RiddleOfWind)
-                || strategy.WindUse == OffensiveAbilityUse.Delay
-                || !state.CanWeave(CDGroup.RiddleOfWind, 0.5f, deadline)
+                || strategy.WindUse == Strategy.OffensiveAbilityUse.Delay
+                || !state.CanWeave(CDGroup.RiddleOfWind, 0.6f, deadline)
             )
                 return false;
 
-            if (strategy.WindUse == OffensiveAbilityUse.Force)
+            if (strategy.WindUse == Strategy.OffensiveAbilityUse.Force)
                 return true;
 
             // thebalance recommends using RoW like an oGCD dot, so we use on cooldown as long as RoF has been used first
@@ -581,12 +602,12 @@ namespace BossMod.MNK
         {
             if (
                 !state.Unlocked(AID.Brotherhood)
-                || strategy.BrotherhoodUse == OffensiveAbilityUse.Delay
-                || !state.CanWeave(CDGroup.Brotherhood, 0.5f, deadline)
+                || strategy.BrotherhoodUse == Strategy.OffensiveAbilityUse.Delay
+                || !state.CanWeave(CDGroup.Brotherhood, 0.6f, deadline)
             )
                 return false;
 
-            if (strategy.BrotherhoodUse == OffensiveAbilityUse.Force)
+            if (strategy.BrotherhoodUse == Strategy.OffensiveAbilityUse.Force)
                 return true;
 
             return strategy.NumPointBlankAOETargets == 0
