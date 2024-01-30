@@ -88,7 +88,7 @@ namespace BossMod.RPR
 
         protected override NextAction CalculateAutomaticGCD()
         {
-            if (Autorot.PrimaryTarget == null || AutoAction < AutoActionAIFight)
+            if (AutoAction < AutoActionAIFight)
                 return new();
             var aid = Rotation.GetNextBestGCD(_state, _strategy, _aoe);
             return MakeResult(aid, Autorot.PrimaryTarget);
@@ -96,7 +96,7 @@ namespace BossMod.RPR
 
         protected override NextAction CalculateAutomaticOGCD(float deadline)
         {
-            if (Autorot.PrimaryTarget == null || AutoAction < AutoActionAIFight)
+            if (AutoAction < AutoActionAIFight)
                 return new();
 
             ActionID res = new();

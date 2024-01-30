@@ -7,6 +7,15 @@ using System.Numerics;
 namespace BossMod
 {
     // utility for drawing time-related data
+
+    public static class ExtensionMethods
+    {
+        public static int RoundOff(this int i)
+        {
+            return ((int)Math.Round(i / 10.0)) * 10;
+        }
+    }
+
     public class Timeline
     {
         // definition of a timeline column
@@ -110,7 +119,7 @@ namespace BossMod
 
         private float _tScroll = 0;
         private float _tickFrequency = 5;
-        private float _timeAxisWidth = 35;
+        private float _timeAxisWidth = 65;
 
         // these fields are transient and reinitialized on each draw
         private float _height = 0;
@@ -219,6 +228,7 @@ namespace BossMod
             _tScroll = MathF.Max(_tScroll, MinTime);
         }
 
+
         private void DrawTimeAxis()
         {
             var maxT = Math.Min(MaxTime, _tScroll + _height / PixelsPerSecond);
@@ -226,7 +236,15 @@ namespace BossMod
             drawlist.AddLine(_screenClientTL, CanvasCoordsToScreenCoords(0, maxT), 0xffffffff);
             for (float t = MathF.Ceiling(_tScroll / _tickFrequency) * _tickFrequency; t <= maxT; t += _tickFrequency)
             {
-                string tickText = $"{t:f1}";
+                int minutes = (int)t / 60;
+                int seconds = (int)t % 60;
+                int milliseconds = (int)((t - (int)t) * 1000);  // Convert to integer
+
+                // Format milliseconds to display a single digit if less than 100
+                int millisecondText = milliseconds.RoundOff();
+
+                string tickText = $"{minutes:D2}:{seconds:D2}.{millisecondText/10:0}";
+
                 var tickTextSize = ImGui.CalcTextSize(tickText);
 
                 var p = CanvasCoordsToScreenCoords(0, t);

@@ -145,9 +145,13 @@ namespace BossMod
             c.StrategyTracks.Add(new("RoW", typeof(CommonRotation.Strategy.OffensiveAbilityUse)));
             c.StrategyTracks.Add(new("BHood", typeof(CommonRotation.Strategy.OffensiveAbilityUse)));
             c.StrategyTracks.Add(new("PerfBal", typeof(MNK.Rotation.Strategy.PerfectBalanceUse)));
-            c.StrategyTracks.Add(new("SSS", typeof(CommonRotation.Strategy.OffensiveAbilityUse)));
+            c.StrategyTracks.Add(new("SSS", typeof(MNK.Rotation.Strategy.SSSUse)));
             c.StrategyTracks.Add(new("Pot", typeof(MNK.Rotation.Strategy.PotionUse), 270));
             c.StrategyTracks.Add(new("DK", typeof(MNK.Rotation.Strategy.DragonKickStrat)));
+            c.StrategyTracks.Add(new("RapGCD", typeof(MNK.Rotation.Strategy.RaptorGCD)));
+            c.StrategyTracks.Add(new("Meditate", typeof(MNK.Rotation.Strategy.MeditateUse)));
+            c.StrategyTracks.Add(new("PerfGCD", typeof(MNK.Rotation.Strategy.PerfGCD)));
+            c.StrategyTracks.Add(new("CrlGCD", typeof(MNK.Rotation.Strategy.CoeurlGCD)));
             return c;
         }
 

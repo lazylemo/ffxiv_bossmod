@@ -521,6 +521,8 @@ namespace BossMod.RPR
         {
             bool plentifulReady = state.Unlocked(AID.PlentifulHarvest) && state.ImmortalSacrificeLeft > state.AnimationLock && state.CircleofSacrificeLeft < state.GCD;
             // prepull
+            if (strategy.CombatTimer < 0 && !state.HasSoulsow)
+                return AID.SoulSow;
             if (strategy.CombatTimer > -100 && strategy.CombatTimer < -4.2f && !state.HasSoulsow)
                 return AID.SoulSow;
             if (strategy.CombatTimer > -100 && strategy.CombatTimer < -1.6f)

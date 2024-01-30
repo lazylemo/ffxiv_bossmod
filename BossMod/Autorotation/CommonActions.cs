@@ -486,6 +486,20 @@ namespace BossMod
         private static ulong previousTargetId;
         private static bool combatStartTimeCaptured;
 
+        protected float TarPercentHP()
+        {
+            var tar = Autorot.PrimaryTarget;
+
+            if (tar != null)
+            {
+                float tarMaxHP = tar.HP.Max;
+                float tarCurHP = tar.HP.Cur;
+
+                return (tarCurHP / tarMaxHP) * 100;
+            }
+            return float.PositiveInfinity;
+        }
+
         protected float TimeToKill()
         {
             var tar = Autorot.PrimaryTarget;

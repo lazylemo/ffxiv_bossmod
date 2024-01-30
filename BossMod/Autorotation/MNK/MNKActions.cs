@@ -7,6 +7,7 @@ namespace BossMod.MNK
     {
         public const int AutoActionST = AutoActionFirstCustom + 0;
         public const int AutoActionAOE = AutoActionFirstCustom + 1;
+        public const int AutoActionFiller = AutoActionFirstCustom + 2;
 
         private MNKConfig _config;
         private Rotation.State _state;
@@ -67,6 +68,13 @@ namespace BossMod.MNK
             _strategy.ApplyStrategyOverrides(Autorot.Bossmods.ActiveModule?.PlanExecution?.ActiveStrategyOverrides(Autorot.Bossmods.ActiveModule.StateMachine) ?? new uint[0]);
             _strategy.NumPointBlankAOETargets = autoAction == AutoActionST ? 0 : NumTargetsHitByPBAOE();
             _strategy.NumEnlightenmentTargets = Autorot.PrimaryTarget != null && autoAction != AutoActionST && _state.Unlocked(AID.HowlingFist) ? NumTargetsHitByEnlightenment(Autorot.PrimaryTarget) : 0;
+            _strategy.UseAOE = _strategy.NumPointBlankAOETargets >= 3;
+            if (autoAction == AutoActionFiller)
+            {
+                _strategy.FireUse = Rotation.Strategy.FireStrategy.Delay;
+                _strategy.WindUse = CommonRotation.Strategy.OffensiveAbilityUse.Delay;
+                _strategy.BrotherhoodUse = CommonRotation.Strategy.OffensiveAbilityUse.Delay;
+            }
             FillStrategyPositionals(_strategy, Rotation.GetNextPositional(_state, _strategy), _state.TrueNorthLeft > _state.GCD);
         }
 
@@ -102,7 +110,7 @@ namespace BossMod.MNK
 
         protected override NextAction CalculateAutomaticOGCD(float deadline)
         {
-            if (Autorot.PrimaryTarget == null || AutoAction < AutoActionAIFight)
+            if (AutoAction < AutoActionAIFight)
                 return new();
 
             ActionID res = new();
@@ -117,24 +125,28 @@ namespace BossMod.MNK
         {
             FillCommonPlayerState(_state);
             _state.TTK = TimeToKill();
+            _state.TargetPercentHP = TarPercentHP();
 
             var gauge = Service.JobGauges.Get<MNKGauge>();
             _state.Chakra = gauge.Chakra;
             _state.BeastChakra = gauge.BeastChakra;
             _state.Nadi = gauge.Nadi;
+            _state.BlitzTimeRemaining = gauge.BlitzTimeRemaining;
 
             (_state.Form, _state.FormLeft) = DetermineForm();
-            _state.DisciplinedFistLeft = StatusDetails(
-                Player,
-                SID.DisciplinedFist,
-                Player.InstanceID
-            ).Left;
+            _state.DisciplinedFistLeft = StatusDetails(Player, SID.DisciplinedFist, Player.InstanceID).Left;
+            _state.HasDisciplinedFist = Player.FindStatus( SID.DisciplinedFist ) != null;
             _state.LeadenFistLeft = StatusDetails(Player, SID.LeadenFist, Player.InstanceID).Left;
             _state.PerfectBalanceLeft = StatusDetails(Player, SID.PerfectBalance, Player.InstanceID).Left;
             _state.FormShiftLeft = StatusDetails(Player, SID.FormlessFist, Player.InstanceID).Left;
             _state.FireLeft = StatusDetails(Player, SID.RiddleOfFire, Player.InstanceID).Left;
             _state.TrueNorthLeft = StatusDetails(Player, SID.TrueNorth, Player.InstanceID).Left;
             _state.TargetDemolishLeft = StatusDetails(Autorot.PrimaryTarget, SID.Demolish, Player.InstanceID).Left;
+            var target = Autorot.PrimaryTarget;
+            if (target != null)
+            {
+                _state.TargetHasDemolish = Autorot.PrimaryTarget.FindStatus(SID.Demolish) != null;
+            }
         }
 
         private (Rotation.Form, float) DetermineForm()
@@ -154,12 +166,9 @@ namespace BossMod.MNK
         private void OnConfigModified(object? sender, EventArgs args)
         {
             // placeholders
-            SupportedSpell(AID.Bootshine).PlaceholderForAuto = _config.FullRotation
-                ? AutoActionST
-                : AutoActionNone;
-            SupportedSpell(AID.ArmOfTheDestroyer).PlaceholderForAuto = SupportedSpell(AID.ShadowOfTheDestroyer).PlaceholderForAuto = _config.FullRotation
-                ? AutoActionAOE
-                : AutoActionNone;
+            SupportedSpell(AID.Bootshine).PlaceholderForAuto = _config.FullRotation ? AutoActionST : AutoActionNone;
+            SupportedSpell(AID.ArmOfTheDestroyer).PlaceholderForAuto = SupportedSpell(AID.ShadowOfTheDestroyer).PlaceholderForAuto = _config.FullRotation ? AutoActionAOE : AutoActionNone;
+            SupportedSpell(AID.SnapPunch).PlaceholderForAuto = _config.FullRotation ? AutoActionFiller : AutoActionNone;
 
             // combo replacement
             SupportedSpell(AID.FourPointFury).TransformAction = _config.AOECombos ? () => ActionID.MakeSpell(Rotation.GetNextComboAction(_state, _strategy, 100, false, Rotation.Strategy.NadiChoice.Automatic)) : null;
@@ -172,18 +181,11 @@ namespace BossMod.MNK
 
             _strategy.PreCombatFormShift = _config.AutoFormShift;
 
+
             // smart targets
         }
 
-        private int NumTargetsHitByPBAOE() =>
-            Autorot.Hints.NumPriorityTargetsInAOECircle(Player.Position, 5);
-
-        private int NumTargetsHitByEnlightenment(Actor primary) =>
-            Autorot.Hints.NumPriorityTargetsInAOERect(
-                Player.Position,
-                (primary.Position - Player.Position).Normalized(),
-                10,
-                _state.Unlocked(AID.Enlightenment) ? 2 : 1
-            );
+        private int NumTargetsHitByPBAOE() => Autorot.Hints.NumPriorityTargetsInAOECircle(Player.Position, 5);
+        private int NumTargetsHitByEnlightenment(Actor primary) => Autorot.Hints.NumPriorityTargetsInAOERect(Player.Position, (primary.Position - Player.Position).Normalized(), 10, _state.Unlocked(AID.Enlightenment) ? 2 : 1);
     }
 }
