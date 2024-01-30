@@ -455,7 +455,7 @@ namespace BossMod.MNK
                         {
                             return Form.OpoOpo;
                         }
-                        else if (state.TargetDemolishLeft < 2.1 && state.DisciplinedFistLeft > 2)
+                        else if (state.TargetDemolishLeft < 3 && state.DisciplinedFistLeft > 2)
                         {
                             return Form.Coeurl;
                         }
@@ -765,15 +765,22 @@ namespace BossMod.MNK
             )
                 return false;
 
-            if (((state.CD(CDGroup.RiddleOfFire) < 60 - (state.AttackGCDTime + 0.5f) && state.CD(CDGroup.RiddleOfFire) > 40)
+            if (strategy.CombatTimer < 10 && state.DisciplinedFistLeft > 0)
+            {
+                if (state.LeadenFistLeft > 0)
+                    return false;
+                if (state.LeadenFistLeft == 0)
+                    return true;
+            }
+
+            if (((state.CD(CDGroup.RiddleOfFire) > 40)
                  || (state.PerfectBalanceLeft > 0 && state.CD(CDGroup.RiddleOfFire) < 1.2f)
                  || (state.PerfectBalanceLeft > 0 && state.CD(CDGroup.RiddleOfFire) > 40f)) && state.DisciplinedFistLeft > 0f)
                 return true;
 
             return  state.FireLeft > state.GCD
-                && ((state.CD(CDGroup.RiddleOfFire) < 60 - (state.AttackGCDTime + 0.5f))
                  || (state.PerfectBalanceLeft > 0 && state.CD(CDGroup.RiddleOfFire) < 1.5)
-                 || (state.PerfectBalanceLeft > 0 && state.CD(CDGroup.RiddleOfFire) > 40));
+                 || (state.PerfectBalanceLeft > 0 && state.CD(CDGroup.RiddleOfFire) > 40);
         }
 
         private static bool ShouldUsePB(State state, Strategy strategy, float deadline)
@@ -829,16 +836,17 @@ namespace BossMod.MNK
                 return false;
             if (strategy.NextNadi == Strategy.NadiChoice.Lunar && state.TargetDemolishLeft < state.GCD + 7)
                 return false;
-
+            if (state.HaveSolar && state.DisciplinedFistLeft > 5 && state.TargetDemolishLeft > 5 && state.FireLeft > 0 && state.CD(CDGroup.Brotherhood) > state.AnimationLock && state.Form == Form.Raptor)
+                return true;
             if (state.HaveLunar && state.HaveSolar && state.DisciplinedFistLeft < state.GCD + 7 && state.CD(CDGroup.Brotherhood) > state.AnimationLock && state.Form == Form.Raptor)
                 return false;
             if (state.HaveLunar && state.HaveSolar && state.TargetDemolishLeft < state.GCD + 7 && state.CD(CDGroup.Brotherhood) > state.AnimationLock && state.Form == Form.Raptor)
                 return false;
-            if (state.CD(CDGroup.RiddleOfFire) < 6.5f && recentDemo && recentTwin && state.FormShiftLeft < state.AnimationLock && state.Form == Form.Raptor && state.DisciplinedFistLeft > state.AnimationLock && state.TargetDemolishLeft > state.AnimationLock && state.CD(CDGroup.Brotherhood) < 15)
+            if (state.CD(CDGroup.RiddleOfFire) < 5 && recentDemo && recentTwin && state.Form == Form.Raptor && state.DisciplinedFistLeft > state.AnimationLock && state.TargetDemolishLeft > state.AnimationLock && state.CD(CDGroup.Brotherhood) < 15)
                 return true;
-            if (state.CD(CDGroup.RiddleOfFire) < 2.5f && recentDemo && recentTwin && state.FormShiftLeft < state.AnimationLock && state.DisciplinedFistLeft > state.AnimationLock && state.TargetDemolishLeft > state.AnimationLock && state.Form == Form.Raptor)
+            if (state.CD(CDGroup.RiddleOfFire) < 2.5f && recentDemo && recentTwin && state.DisciplinedFistLeft > state.AnimationLock && state.TargetDemolishLeft > state.AnimationLock && state.Form == Form.Raptor)
                 return true;
-            if (state.CD(CDGroup.RiddleOfFire) < 1.5f && state.TargetDemolishLeft < 6f && state.FormShiftLeft < state.AnimationLock && state.Form == Form.Raptor && state.DisciplinedFistLeft > state.AnimationLock && state.TargetDemolishLeft > state.AnimationLock)
+            if (state.CD(CDGroup.RiddleOfFire) < 1.5f && state.TargetDemolishLeft < 6f && state.Form == Form.Raptor && state.DisciplinedFistLeft > state.AnimationLock && state.TargetDemolishLeft > state.AnimationLock)
                 return true;
 
             return (state.FireLeft > state.GCD || !state.Unlocked(AID.RiddleOfFire))
