@@ -25,5 +25,8 @@ namespace BossMod
         
         [PropertyDisplay("Use Form Shift out of combat")]
         public bool AutoFormShift = false;
+
+        [PropertyDisplay("Test")]
+        public bool Test = true;
     }
 }

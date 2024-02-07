@@ -138,12 +138,14 @@ namespace BossMod
             c.CooldownTracks.Add(new("ArmsL", ActionID.MakeSpell(MNK.AID.ArmsLength), 32));
             c.CooldownTracks.Add(new("RoE", ActionID.MakeSpell(MNK.AID.RiddleOfEarth), 64));
             c.CooldownTracks.Add(new("Mantra", ActionID.MakeSpell(MNK.AID.Mantra), 42));
+            c.CooldownTracks.Add(new("ANAT", ActionID.MakeSpell(MNK.AID.Anatman), 78));
+            c.CooldownTracks.Add(new("FormSH", ActionID.MakeSpell(MNK.AID.FormShift), 52));
             c.StrategyTracks.Add(new("Dash", typeof(MNK.Rotation.Strategy.DashStrategy)));
             c.StrategyTracks.Add(new("TrueN", typeof(CommonRotation.Strategy.OffensiveAbilityUse)));
             c.StrategyTracks.Add(new("Nadi", typeof(MNK.Rotation.Strategy.NadiChoice)));
             c.StrategyTracks.Add(new("RoF", typeof(MNK.Rotation.Strategy.FireStrategy)));
             c.StrategyTracks.Add(new("RoW", typeof(CommonRotation.Strategy.OffensiveAbilityUse)));
-            c.StrategyTracks.Add(new("BHood", typeof(CommonRotation.Strategy.OffensiveAbilityUse)));
+            c.StrategyTracks.Add(new("BHood", typeof(MNK.Rotation.Strategy.BrotherhoodUse)));
             c.StrategyTracks.Add(new("PerfBal", typeof(MNK.Rotation.Strategy.PerfectBalanceUse)));
             c.StrategyTracks.Add(new("SSS", typeof(MNK.Rotation.Strategy.SSSUse)));
             c.StrategyTracks.Add(new("Pot", typeof(MNK.Rotation.Strategy.PotionUse), 270));
@@ -152,6 +154,7 @@ namespace BossMod
             c.StrategyTracks.Add(new("Meditate", typeof(MNK.Rotation.Strategy.MeditateUse)));
             c.StrategyTracks.Add(new("PerfGCD", typeof(MNK.Rotation.Strategy.PerfGCD)));
             c.StrategyTracks.Add(new("CrlGCD", typeof(MNK.Rotation.Strategy.CoeurlGCD)));
+            c.StrategyTracks.Add(new("Special", typeof(MNK.Rotation.Strategy.SpecialAction)));
             return c;
         }
 

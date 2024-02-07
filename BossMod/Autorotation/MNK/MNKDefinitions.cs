@@ -58,6 +58,9 @@ namespace BossMod.MNK
         FormShift = 4262, // L52, instant, range 0, single-target 0/0, targets=self, animLock=???
         Anatman = 16475, // L78, instant, 60.0s CD (group 12), range 0, single-target 0/0, targets=self, animLock=???
         LegSweep = 7863, // L10, instant, 40.0s CD (group 41), range 3, single-target 0/0, targets=hostile
+
+        // LB3
+        FinalHeaven = 202,
     }
 
     public enum TraitID : uint
@@ -97,6 +100,7 @@ namespace BossMod.MNK
         Feint = 47, // 90.0 max
         ArmsLength = 48, // 120.0 max
         SecondWind = 49, // 120.0 max
+        LimitBreak = 71,
     }
 
     public enum SID : uint
@@ -253,6 +257,7 @@ namespace BossMod.MNK
             SupportedActions.GCD(AID.FormShift, 0);
             SupportedActions.OGCD(AID.Anatman, 0, CDGroup.Anatman, 60.0f);
             SupportedActions.OGCD(AID.LegSweep, 3, CDGroup.LegSweep, 40.0f);
+            SupportedActions.OGCD(AID.FinalHeaven, 8, CDGroup.LimitBreak, 0, 0.6f);
         }
     }
 }

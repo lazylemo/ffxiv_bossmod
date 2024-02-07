@@ -73,7 +73,7 @@ namespace BossMod.MNK
             {
                 _strategy.FireUse = Rotation.Strategy.FireStrategy.Delay;
                 _strategy.WindUse = CommonRotation.Strategy.OffensiveAbilityUse.Delay;
-                _strategy.BrotherhoodUse = CommonRotation.Strategy.OffensiveAbilityUse.Delay;
+                _strategy.BrotherhoodStrategy = Rotation.Strategy.BrotherhoodUse.Delay;
             }
             FillStrategyPositionals(_strategy, Rotation.GetNextPositional(_state, _strategy), _state.TrueNorthLeft > _state.GCD);
         }
@@ -131,9 +131,10 @@ namespace BossMod.MNK
             _state.Chakra = gauge.Chakra;
             _state.BeastChakra = gauge.BeastChakra;
             _state.Nadi = gauge.Nadi;
-            _state.BlitzTimeRemaining = gauge.BlitzTimeRemaining;
+            _state.BlitzTimeRemaining = (float)gauge.BlitzTimeRemaining/(float)1000;
 
             (_state.Form, _state.FormLeft) = DetermineForm();
+            _state.PerfectBalanceStacks = StatusDetails(Player, SID.PerfectBalance, Player.InstanceID).Stacks;
             _state.DisciplinedFistLeft = StatusDetails(Player, SID.DisciplinedFist, Player.InstanceID).Left;
             _state.HasDisciplinedFist = Player.FindStatus( SID.DisciplinedFist ) != null;
             _state.LeadenFistLeft = StatusDetails(Player, SID.LeadenFist, Player.InstanceID).Left;
@@ -167,7 +168,7 @@ namespace BossMod.MNK
         {
             // placeholders
             SupportedSpell(AID.Bootshine).PlaceholderForAuto = _config.FullRotation ? AutoActionST : AutoActionNone;
-            SupportedSpell(AID.ArmOfTheDestroyer).PlaceholderForAuto = SupportedSpell(AID.ShadowOfTheDestroyer).PlaceholderForAuto = _config.FullRotation ? AutoActionAOE : AutoActionNone;
+            SupportedSpell(AID.Enlightenment).PlaceholderForAuto = _config.FullRotation ? AutoActionAOE : AutoActionNone;
             SupportedSpell(AID.SnapPunch).PlaceholderForAuto = _config.FullRotation ? AutoActionFiller : AutoActionNone;
 
             // combo replacement
