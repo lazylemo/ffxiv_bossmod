@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using Dalamud.Game.ClientState.JobGauge.Types;
 
 namespace BossMod.MNK
@@ -134,6 +134,8 @@ namespace BossMod.MNK
             _state.BlitzTimeRemaining = (float)gauge.BlitzTimeRemaining/(float)1000;
 
             (_state.Form, _state.FormLeft) = DetermineForm();
+            _state.SSSLeft = StatusDetails(Player, SID.SixSidedStar, Player.InstanceID).Left;
+            _state.HasSSS = Player.FindStatus(SID.SixSidedStar) != null;
             _state.PerfectBalanceStacks = StatusDetails(Player, SID.PerfectBalance, Player.InstanceID).Stacks;
             _state.DisciplinedFistLeft = StatusDetails(Player, SID.DisciplinedFist, Player.InstanceID).Left;
             _state.HasDisciplinedFist = Player.FindStatus( SID.DisciplinedFist ) != null;

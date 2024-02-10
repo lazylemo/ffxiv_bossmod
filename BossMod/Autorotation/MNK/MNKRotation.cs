@@ -1,4 +1,4 @@
-﻿using System.Linq;
+using System.Linq;
 using Dalamud.Game.ClientState.JobGauge.Enums;
 using static BossMod.CommonRotation.Strategy;
 // CONTRIB: made by xan, not checked
@@ -34,6 +34,8 @@ namespace BossMod.MNK
             public float TargetPercentHP;
             public float BlitzTimeRemaining;
             public int PerfectBalanceStacks;
+            public float SSSLeft;
+            public bool HasSSS;
             public bool HaveLunar => Nadi.HasFlag(Nadi.LUNAR);
             public bool HaveSolar => Nadi.HasFlag(Nadi.SOLAR);
             public bool HasDisciplinedFist;
@@ -277,6 +279,12 @@ namespace BossMod.MNK
 
                 [PropertyDisplay("Form Shift", 0xFFDB8BCA)]
                 FormShift = 2,
+
+                [PropertyDisplay("LB3 after SSS", 0x8000ff00)]
+                LB3afterSSS = 3, // use LB3 if available
+
+                [PropertyDisplay("Form Shift then Anatman", 0xFFDB8BCA)]
+                FormShiftAnat = 4,
             }
 
             public FireStrategy FireUse;
@@ -532,16 +540,12 @@ namespace BossMod.MNK
             {
                 case Strategy.NadiChoice.Solar:
                     return true;
-                case Strategy.NadiChoice.Automatic:
-                    if ((!recentDemo || !recentTwin) && !state.HaveSolar)
-                        return true;
-                    break;
                 case Strategy.NadiChoice.Lunar:
                     if (recentTwin && recentDemo && (!state.HaveLunar || (state.HaveLunar && state.HaveSolar)))
                         return false;
                     break;
                 default:
-                    if (state.CD(CDGroup.RiddleOfFire) < 6 && state.CD(CDGroup.Brotherhood) < 10 && state.PerfectBalanceLeft > 0 && !state.HaveSolar)
+                    if (state.CD(CDGroup.RiddleOfFire) < 6 && state.CD(CDGroup.Brotherhood) < 10 && !state.HaveSolar)
                         return true;
                     if ((!recentTwin || !recentDemo) && !state.HaveSolar)
                         return true;
@@ -552,8 +556,15 @@ namespace BossMod.MNK
 
         public static AID GetNextBestGCD(State state, Strategy strategy)
         {
-            if (strategy.SpecialActionUse == Strategy.SpecialAction.FormShift && state.FormShiftLeft < 2)
+            if (strategy.SpecialActionUse == Strategy.SpecialAction.FormShift && state.FormShiftLeft < 2 && !state.TargetingEnemy)
                 return AID.FormShift;
+            if (strategy.SpecialActionUse == Strategy.SpecialAction.FormShiftAnat && !state.TargetingEnemy)
+            {
+                if (state.FormShiftLeft < 2)
+                return AID.FormShift;
+                if (state.FormShiftLeft > 2)
+                    return AID.Anatman;
+            }
             // LB3
             if (strategy.SpecialActionUse == Strategy.SpecialAction.LB3)
                 return AID.FinalHeaven;
@@ -600,6 +611,14 @@ namespace BossMod.MNK
                 return AID.None;
             }
 
+            if ((state.BestBlitz != AID.MasterfulBlitz && state.TargetDemolishLeft > 0 && state.DisciplinedFistLeft > 0 && state.FireLeft >= state.GCD) || (state.BlitzTimeRemaining < state.AttackGCDTime * 2  + state.GCD && state.BeastCount == 3))
+            {
+                if (strategy.BrotherhoodStrategy == Strategy.BrotherhoodUse.Delay)
+                    return state.BestBlitz;
+                if (state.CD(CDGroup.Brotherhood) > 10)
+                    return state.BestBlitz;
+            }
+
             if (strategy.DragonKickSpam == Strategy.DragonKickStrat.Force
                 && (strategy.FightEndIn > state.GCD && state.DisciplinedFistLeft < state.AttackGCDTime * 1 && state.Form == Form.Raptor))
                 return AID.TwinSnakes;
@@ -612,14 +631,6 @@ namespace BossMod.MNK
 
             if (state.Unlocked(AID.SixSidedStar) && strategy.SSSStrategy == Strategy.SSSUse.Force)
                 return AID.SixSidedStar;
-
-            if ((state.BestBlitz != AID.MasterfulBlitz && state.TargetDemolishLeft > 0 && state.DisciplinedFistLeft > state.GCD && state.FireLeft >= state.GCD) || (state.BlitzTimeRemaining < state.AttackGCDTime * 2  + state.GCD && state.BeastCount == 3))
-            {
-                if (strategy.BrotherhoodStrategy == Strategy.BrotherhoodUse.Delay)
-                    return state.BestBlitz;
-                if (state.CD(CDGroup.Brotherhood) > 10)
-                    return state.BestBlitz;
-            }
 
             if (strategy.SSSStrategy == Strategy.SSSUse.Automatic
                 && state.PerfectBalanceLeft == 0
@@ -684,11 +695,14 @@ namespace BossMod.MNK
             if (strategy.SpecialActionUse == Strategy.SpecialAction.LB3)
                 return ActionID.MakeSpell(AID.FinalHeaven);
 
+            if (strategy.SpecialActionUse == Strategy.SpecialAction.LB3afterSSS && (state.HasSSS || state.SSSLeft > 0))
+                return ActionID.MakeSpell(AID.FinalHeaven);
+
             // TODO: potion
             if (ShouldUsePotion(state, strategy) && state.CanWeave(state.PotionCD, 1.1f, deadline))
                 return CommonDefinitions.IDPotionStr;
 
-            if (strategy.CombatTimer < -0.2f && strategy.CombatTimer > -100)
+            if (strategy.CombatTimer < 0 && strategy.CombatTimer > -100)
             {
                 if (
                     strategy.CombatTimer > -0.2
@@ -853,7 +867,7 @@ namespace BossMod.MNK
 
             if (strategy.BrotherhoodStrategy == Strategy.BrotherhoodUse.DelaytillRoF)
             {
-                if (state.CD(CDGroup.RiddleOfFire) < 1.5)
+                if ((state.CD(CDGroup.RiddleOfFire) < 1.5 || state.PerfectBalanceLeft > 0))
                     return true;
                 return false;
             }
@@ -901,7 +915,7 @@ namespace BossMod.MNK
 
             if (strategy.PerfectBalanceStrategy == Strategy.PerfectBalanceUse.Lunar)
             {
-                if (recentDemo && recentTwin && state.Form == Form.Raptor && state.FormShiftLeft < state.AnimationLock)
+                if (recentDemo && recentTwin && state.Form == Form.Raptor)
                     return true;
                 return false;
             }
@@ -921,7 +935,7 @@ namespace BossMod.MNK
 
             if (strategy.NextNadi == Strategy.NadiChoice.Solar)
             {
-                if (state.Form == Form.Raptor)
+                if (state.Form == Form.Raptor && (state.CD(CDGroup.RiddleOfFire) < 6 || state.FireLeft > 0))
                     return true;
                 return false;
             }
@@ -929,15 +943,15 @@ namespace BossMod.MNK
                 return false;
             if (strategy.NextNadi == Strategy.NadiChoice.Lunar && state.TargetDemolishLeft < state.GCD + 7)
                 return false;
-            if (state.FireLeft < state.AttackGCDTime * 3 && state.FireLeft > 0f)
+            if (state.FireLeft < state.AttackGCDTime * 3 + deadline && state.FireLeft > 0)
                 return false;
             if (state.CD(CDGroup.RiddleOfFire) < 5.5f && recentDemo && recentTwin && state.Form == Form.Raptor && state.DisciplinedFistLeft > 0 && state.TargetDemolishLeft > 0 && state.CD(CDGroup.Brotherhood) < 15)
                 return true;
             if (state.CD(CDGroup.RiddleOfFire) < 2.5f && recentDemo && recentTwin && state.DisciplinedFistLeft > 0f && state.TargetDemolishLeft > 0f && state.Form == Form.Raptor)
                 return true;
-            if (state.CD(CDGroup.RiddleOfFire) < 2f && state.Form == Form.Raptor && state.DisciplinedFistLeft > 0f && state.TargetDemolishLeft > 0f && !state.HaveSolar)
+            if (state.CD(CDGroup.RiddleOfFire) < 2f && state.Form == Form.Raptor && state.DisciplinedFistLeft > 0f && state.TargetDemolishLeft > 0f && !state.HaveSolar && strategy.NextNadi == Strategy.NadiChoice.Automatic)
                 return true;
-            if (state.HaveSolar && state.DisciplinedFistLeft > 5 && state.TargetDemolishLeft > 5 && state.FireLeft > 0f && state.CD(CDGroup.Brotherhood) > state.AnimationLock && state.Form == Form.Raptor)
+            if (state.HaveSolar && recentDemo && recentTwin && state.DisciplinedFistLeft > 0 && state.TargetDemolishLeft > 0 && state.FireLeft > 0f && state.CD(CDGroup.Brotherhood) > state.AnimationLock && state.Form == Form.Raptor)
                 return true;
             if (state.HaveLunar && state.HaveSolar && state.DisciplinedFistLeft < state.GCD + 7 && state.CD(CDGroup.Brotherhood) > 40 && state.CD(CDGroup.Brotherhood) < 80 && state.Form == Form.Raptor)
                 return false;
